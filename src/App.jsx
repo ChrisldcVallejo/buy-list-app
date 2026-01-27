@@ -214,7 +214,7 @@ function App() {
           <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
             <div className="flex items-center gap-2">
               <span className="text-3xl filter drop-shadow-md">🥑</span>
-              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">FreshList</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">Buy List</h1>
               <button onClick={shareList} className="ml-2 btn-icon-glass" title="Compartir WhatsApp">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.664-.698c.983.565 1.761.792 2.796.793 3.18 0 5.768-2.587 5.768-5.767s-2.588-5.767-5.768-5.767zm0 9.873c-.863 0-1.57-.22-2.316-.622l-1.371.36.368-1.325c-.456-.757-.665-1.391-.664-2.52 0-2.264 1.842-4.106 4.105-4.106 2.265 0 4.107 1.842 4.107 4.106 0 2.264-1.842 4.107-4.106 4.107z"/></svg>
               </button>
