@@ -149,6 +149,7 @@ function App() {
     setNewItem(''); 
     setIsProductOpen(false); 
     
+    // Mantener el foco en el producto para seguir añadiendo rápido
     if(productInputRef.current) productInputRef.current.focus();
   };
 
@@ -161,18 +162,34 @@ function App() {
     performAdd(suggestion, newStore);
   };
 
+  // --- NUEVO: Manejo explícito de Enter en el Producto ---
+  const handleProductKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Evita el submit doble
+      performAdd(newItem, newStore);
+    }
+  };
+
+  // --- MODIFICADO: Manejo explícito de Enter en la Tienda ---
   const handleStoreKeyDown = (e) => {
     if (e.key === 'Enter') {
-      if (newItem.trim()) return; 
-      e.preventDefault();
-      const storeName = newStore.trim();
-      if (!storeName) return;
-      
-      const storeExists = availableStores.some(s => s.toLowerCase() === storeName.toLowerCase());
-      if (!storeExists) setAvailableStores([...availableStores, storeName]);
-      openStoreTab(storeName);
-      setIsStoreOpen(false);
-      if(productInputRef.current) productInputRef.current.focus();
+      e.preventDefault(); // Controlamos nosotros la acción
+
+      if (newItem.trim()) {
+        // CASO 1: Si hay producto escrito, AÑADIR TODO
+        performAdd(newItem, newStore);
+      } else {
+        // CASO 2: Si NO hay producto, solo abrir pestaña
+        const storeName = newStore.trim();
+        if (!storeName) return;
+        
+        const storeExists = availableStores.some(s => s.toLowerCase() === storeName.toLowerCase());
+        if (!storeExists) setAvailableStores([...availableStores, storeName]);
+        openStoreTab(storeName);
+        setIsStoreOpen(false);
+        // Volver el foco al producto
+        if(productInputRef.current) productInputRef.current.focus();
+      }
     }
   };
 
@@ -197,13 +214,13 @@ function App() {
           <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
             <div className="flex items-center gap-2">
               <span className="text-3xl filter drop-shadow-md">🥑</span>
-              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">Mi Compra</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">FreshList</h1>
               <button onClick={shareList} className="ml-2 btn-icon-glass" title="Compartir WhatsApp">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.664-.698c.983.565 1.761.792 2.796.793 3.18 0 5.768-2.587 5.768-5.767s-2.588-5.767-5.768-5.767zm0 9.873c-.863 0-1.57-.22-2.316-.622l-1.371.36.368-1.325c-.456-.757-.665-1.391-.664-2.52 0-2.264 1.842-4.106 4.105-4.106 2.265 0 4.107 1.842 4.107 4.106 0 2.264-1.842 4.107-4.106 4.107z"/></svg>
               </button>
             </div>
             
-            {/* UNDO / REDO CON TEXTO */}
+            {/* UNDO / REDO */}
             <div className="flex bg-black/20 rounded-full p-1 backdrop-blur-md">
               <button onClick={handleUndo} disabled={history.length === 0}
                 className={`px-3 py-1 text-xs rounded-l-full flex items-center gap-1 transition-colors ${history.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>
@@ -232,7 +249,9 @@ function App() {
                   className="input-field"
                   value={newItem} 
                   onChange={(e) => { setNewItem(e.target.value); setIsProductOpen(true); }} 
+                  onKeyDown={handleProductKeyDown} // <--- NUEVO: Capturamos Enter aquí
                   onFocus={() => setIsProductOpen(true)}
+                  enterKeyHint="go" // <--- NUEVO: Pone el botón "Ir" en el teclado móvil
                   autoFocus 
                 />
                 
@@ -261,8 +280,16 @@ function App() {
                   Tienda o Súper
                 </label>
                 <div className="flex relative h-full">
-                  <input type="text" placeholder="Tienda" className="input-field pr-8"
-                    value={newStore} onKeyDown={handleStoreKeyDown} onChange={(e) => { setNewStore(e.target.value); setIsStoreOpen(true); }} onFocus={() => setIsStoreOpen(true)} />
+                  <input 
+                    type="text" 
+                    placeholder="Tienda" 
+                    className="input-field pr-8"
+                    value={newStore} 
+                    onKeyDown={handleStoreKeyDown} // <--- MODIFICADO: Lógica robusta
+                    onChange={(e) => { setNewStore(e.target.value); setIsStoreOpen(true); }} 
+                    onFocus={() => setIsStoreOpen(true)} 
+                    enterKeyHint="go" // <--- NUEVO
+                  />
                   <button type="button" onClick={() => setIsStoreOpen(!isStoreOpen)} className="absolute right-0 top-0 h-full px-3 text-emerald-600 hover:text-emerald-800 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                   </button>
