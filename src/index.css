@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* --- CONTENEDORES --- */
+  .app-container {
+    @apply min-h-screen bg-gradient-to-br from-lime-50 via-white to-orange-50 p-4 md:p-8 font-sans text-gray-700;
+  }
+
+  .main-card {
+    @apply max-w-xl mx-auto bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden flex flex-col min-h-[650px] transition-all duration-300;
+  }
+
+  .header-section {
+    @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg z-20 relative;
+  }
+
+  /* --- INPUTS --- */
+  .input-field {
+    @apply w-full pl-4 pr-4 py-3 rounded-xl bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-300 shadow-inner transition-all;
+  }
+
+  /* --- BOTONES --- */
+  .btn-add {
+    @apply bg-gradient-to-r from-orange-400 to-amber-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2;
+  }
+
+  .btn-icon-glass {
+    @apply bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition transform hover:scale-110 flex items-center justify-center border border-white/30;
+  }
+
+  /* --- PESTAÑAS (TABS) --- */
+  /* NOTA: Hemos quitado 'group' de aquí */
+  .tab-base {
+    @apply flex items-center gap-2 px-4 py-2 whitespace-nowrap font-medium text-sm transition-all cursor-pointer rounded-lg border;
+  }
+
+  .tab-active {
+    @apply bg-white border-emerald-200 text-emerald-700 shadow-md ring-1 ring-emerald-100;
+  }
+
+  .tab-inactive {
+    @apply bg-transparent border-transparent text-gray-500 hover:bg-white hover:text-gray-700 hover:shadow-sm;
+  }
+
+  /* --- LISTA DE ITEMS --- */
+  /* NOTA: Hemos quitado 'group' de aquí también */
+  .list-item-container {
+    @apply flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-100 transition-all;
+  }
+
+  .checkbox-circle {
+    @apply w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300;
+  }
+}
