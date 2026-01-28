@@ -4,7 +4,10 @@ const DEFAULT_STORES = [];
 
 function App() {
   // --- ESTADOS ---
-  const [listName, setListName] = useState();
+  
+  // CAMBIO 1: Nombre vacío por defecto
+  const [listName, setListName] = useState(''); 
+  
   const [items, setItems] = useState(() => {
     const saved = localStorage.getItem('shopping-list');
     return saved ? JSON.parse(saved) : [];
@@ -78,7 +81,7 @@ function App() {
     }
   }, [openStores, activeTab]); 
 
-  // --- IMPORTAR URL (Deep Linking) ---
+  // --- IMPORTAR URL ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedData = params.get('data');
@@ -124,6 +127,13 @@ function App() {
   };
 
   // --- LÓGICA DE NEGOCIO ---
+  // CAMBIO 2: Función para controlar el ENTER en el nombre de la lista
+  const handleListNameKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.target.blur(); // Esto es lo que cierra el teclado en móvil
+    }
+  };
 
   const saveToHistory = () => {
     const currentItemsCopy = JSON.parse(JSON.stringify(items));
@@ -428,6 +438,8 @@ function App() {
                  type="text" 
                  value={listName} 
                  onChange={(e) => setListName(e.target.value)}
+                 onKeyDown={handleListNameKeyDown} // <-- CIERRA TECLADO AL PULSAR INTRO
+                 enterKeyHint="done" // <-- MUESTRA "HECHO" EN EL TECLADO MÓVIL
                  className="bg-white/20 text-white font-bold text-xl focus:outline-none focus:bg-white/30 rounded-lg px-3 py-2 w-full placeholder-white/60 border border-white/10"
                  placeholder="Pon nombre a tu lista"
                />
@@ -456,7 +468,6 @@ function App() {
               <span className="text-3xl filter drop-shadow-md">🛒</span>
               <h1 className="text-2xl font-black tracking-tight text-white drop-shadow-md italic">Buy List</h1>
               
-              {/* CAMBIO: BOTÓN WHATSAPP GRANDE CON TEXTO */}
               <button 
                 onClick={shareList} 
                 className="ml-3 bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-sm px-4 py-2 rounded-full shadow-lg flex items-center gap-2 transition-all transform hover:scale-105"
@@ -465,11 +476,10 @@ function App() {
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.664-.698c.983.565 1.761.792 2.796.793 3.18 0 5.768-2.587 5.768-5.767s-2.588-5.767-5.768-5.767zm0 9.873c-.863 0-1.57-.22-2.316-.622l-1.371.36.368-1.325c-.456-.757-.665-1.391-.664-2.52 0-2.264 1.842-4.106 4.105-4.106 2.265 0 4.107 1.842 4.107 4.106 0 2.264-1.842 4.107-4.106 4.107z"/>
                 </svg>
-                <span>Enviar lista</span>
+                <span>Compartir</span>
               </button>
             </div>
             
-            {/* UNDO / REDO */}
             <div className="flex bg-black/20 rounded-full p-1 backdrop-blur-md">
               <button onClick={handleUndo} disabled={history.length === 0}
                 className={`px-3 py-1 text-xs rounded-l-full flex items-center gap-1 transition-colors ${history.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>
