@@ -580,20 +580,25 @@ function App() {
 
   // --- VISTA PRINCIPAL (APP) ---
   return (
-    // AQUÍ ESTÁ EL CAMBIO CLAVE: Controlamos el degradado vs color oscuro en el className
     <div className={`app-container transition-colors duration-300 ${darkMode ? 'dark bg-slate-950' : 'bg-gradient-to-br from-lime-50 via-white to-orange-50'} ${largeText ? 'text-lg' : ''}`}>
       <div className="main-card dark:bg-slate-900 dark:border-slate-800 transition-colors duration-300">
         
         {/* HEADER */}
         <div className="header-section dark:from-emerald-900 dark:to-teal-900 transition-colors duration-300">
           
-          <div className="flex justify-center items-center gap-3 mb-4 relative">
+          {/* ESTRUCTURA FLEXIBLE: Columna en móvil, Fila en PC */}
+          <div className="flex flex-col md:flex-row justify-center items-center gap-3 mb-6 relative">
+              
+              {/* TÍTULO */}
               <div className="flex items-center gap-2">
                 <span className="text-4xl filter drop-shadow-md">🛒</span>
                 <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md italic">{t.appName}</h1>
               </div>
               
-              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex gap-2">
+              {/* BOTONES DE CONFIGURACIÓN */}
+              {/* En móvil: debajo del título con margen superior (mt-2) */}
+              {/* En PC (md): posición absoluta a la derecha y centrados verticalmente */}
+              <div className="mt-2 md:mt-0 md:absolute md:right-0 md:top-1/2 md:transform md:-translate-y-1/2 flex gap-2">
                 
                 {/* BOTÓN TAMAÑO DE TEXTO */}
                 <button 
@@ -851,7 +856,7 @@ function App() {
 
       </div>
 
-      {/* DIÁLOGO DE CONFIRMACIÓN */}
+      {/* DIALOG DE CONFIRMACIÓN */}
       {confirmDialog.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform transition-all scale-100 dark:bg-slate-800">
