@@ -5,7 +5,8 @@
 @layer components {
   /* --- CONTENEDORES --- */
   .app-container {
-    @apply min-h-screen bg-gradient-to-br from-lime-50 via-white to-orange-50 p-4 md:p-8 font-sans text-gray-700;
+    /* Eliminado el bg-gradient de aquí para manejarlo en App.jsx */
+    @apply min-h-screen p-4 md:p-8 font-sans text-gray-700;
   }
 
   .main-card {
@@ -31,7 +32,6 @@
   }
 
   /* --- PESTAÑAS (TABS) --- */
-  /* NOTA: Hemos quitado 'group' de aquí */
   .tab-base {
     @apply flex items-center gap-2 px-4 py-2 whitespace-nowrap font-medium text-sm transition-all cursor-pointer rounded-lg border;
   }
@@ -45,7 +45,6 @@
   }
 
   /* --- LISTA DE ITEMS --- */
-  /* NOTA: Hemos quitado 'group' de aquí también */
   .list-item-container {
     @apply flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-100 transition-all;
   }

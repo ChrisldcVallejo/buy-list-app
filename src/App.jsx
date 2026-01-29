@@ -1,11 +1,27 @@
 import { useState, useEffect, useRef } from 'react'
+import { TRANSLATIONS, LANGUAGES } from './translations'
 
 const DEFAULT_STORES = [];
 
+const PUBLIC_URL = "buy-list-mi-compra.netlify.app"; 
+
 function App() {
+  // --- ESTADO IDIOMA ---
+  const [language, setLanguage] = useState(() => localStorage.getItem('app-language') || null);
+
+  // --- ESTADO MODO OSCURO ---
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('app-theme');
+    return saved === 'dark';
+  });
+
+  // --- ESTADO TAMAÑO TEXTO ---
+  const [largeText, setLargeText] = useState(() => {
+    const saved = localStorage.getItem('app-text-size');
+    return saved === 'large';
+  });
+
   // --- ESTADOS ---
-  
-  // CAMBIO 1: Nombre vacío por defecto
   const [listName, setListName] = useState(''); 
   
   const [items, setItems] = useState(() => {
@@ -39,31 +55,46 @@ function App() {
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [showArchives, setShowArchives] = useState(false); 
   
+  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('tutorial-completed'));
+  const [tutorialStep, setTutorialStep] = useState(0);
+  
   const [activeTab, setActiveTab] = useState('');
   const productInputRef = useRef(null);
 
-  // Estados UI
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [confirmDialog, setConfirmDialog] = useState({ 
-    show: false, 
-    title: '', 
-    message: '', 
-    action: null 
-  });
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', action: null });
+
+  const t = language ? TRANSLATIONS[language] : TRANSLATIONS['es']; 
 
   // --- ORDENACIÓN ---
   const sortedAvailableStores = [...availableStores].sort((a, b) => a.localeCompare(b));
   const sortedOpenStores = [...openStores].sort((a, b) => a.localeCompare(b));
-  
-  const filteredCatalog = catalog.filter(item => 
-    item.toLowerCase().includes(newItem.toLowerCase())
-  ).sort();
+  const filteredCatalog = catalog.filter(item => item.toLowerCase().includes(newItem.toLowerCase())).sort();
 
   // --- EFECTOS ---
   useEffect(() => { localStorage.setItem('shopping-list', JSON.stringify(items)); }, [items]);
   useEffect(() => { localStorage.setItem('shopping-archives', JSON.stringify(savedLists)); }, [savedLists]); 
   useEffect(() => { localStorage.setItem('shopping-catalog', JSON.stringify(catalog)); }, [catalog]);
   useEffect(() => { localStorage.setItem('shopping-stores', JSON.stringify(availableStores)); }, [availableStores]);
+  
+  useEffect(() => {
+    if (language) localStorage.setItem('app-language', language);
+  }, [language]);
+
+  // Efecto para Modo Oscuro
+  useEffect(() => {
+    localStorage.setItem('app-theme', darkMode ? 'dark' : 'light');
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Efecto para Tamaño de Texto
+  useEffect(() => {
+    localStorage.setItem('app-text-size', largeText ? 'large' : 'normal');
+  }, [largeText]);
 
   useEffect(() => {
     const storesWithItems = [...new Set(items.map(i => i.store))];
@@ -94,22 +125,22 @@ function App() {
 
         setConfirmDialog({
           show: true,
-          title: "📥 Lista Recibida",
-          message: `Has recibido la lista "${finalName}". ¿Quieres cargarla? (Sustituirá la actual).`,
+          title: t.dialogImportTitle,
+          message: `${t.dialogImportMsg} ("${finalName}")`,
           action: () => {
             setItems(parsedItems);
             setListName(finalName);
             setHistory([]);
             setFuture([]);
-            showToast("Lista importada con éxito", "success");
+            showToast(t.toastSaved, "success");
             window.history.replaceState({}, document.title, window.location.pathname);
           }
         });
       } catch (e) {
-        showToast("Error al leer la lista compartida", "error");
+        showToast("Error", "error");
       }
     }
-  }, []);
+  }, [language]);
 
   // --- HELPERS UI ---
   const showToast = (message, type = 'success') => {
@@ -126,12 +157,33 @@ function App() {
     closeDialog();
   };
 
+  const handleSelectLanguage = (langCode) => {
+    setLanguage(langCode);
+  };
+
+  // --- LÓGICA TUTORIAL ---
+  const nextStep = () => {
+    if (tutorialStep < t.tutorial.length - 1) {
+      setTutorialStep(tutorialStep + 1);
+    } else {
+      completeTutorial();
+    }
+  };
+
+  const prevStep = () => {
+    if (tutorialStep > 0) setTutorialStep(tutorialStep - 1);
+  };
+
+  const completeTutorial = () => {
+    localStorage.setItem('tutorial-completed', 'true');
+    setShowTutorial(false);
+  };
+
   // --- LÓGICA DE NEGOCIO ---
-  // CAMBIO 2: Función para controlar el ENTER en el nombre de la lista
   const handleListNameKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      e.target.blur(); // Esto es lo que cierra el teclado en móvil
+      e.target.blur(); 
     }
   };
 
@@ -148,7 +200,7 @@ function App() {
     setFuture([currentState, ...future]); 
     setItems(previousState); 
     setHistory(history.slice(0, -1)); 
-    showToast("Deshacer realizado", "info");
+    showToast(t.toastUndo, "info");
   };
 
   const handleRedo = () => {
@@ -158,15 +210,26 @@ function App() {
     setHistory([...history, currentState]); 
     setItems(nextState); 
     setFuture(future.slice(1)); 
-    showToast("Rehacer realizado", "info");
+    showToast(t.toastRedo, "info");
+  };
+
+  const updateQuantity = (id, delta) => {
+    saveToHistory();
+    setItems(items.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, (item.quantity || 1) + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }));
   };
 
   const requestNewList = () => {
     if (items.length > 0) {
       setConfirmDialog({
         show: true,
-        title: "Nueva Lista",
-        message: "¿Seguro que quieres borrar la lista actual y empezar una nueva? Asegúrate de haber guardado.",
+        title: t.dialogNewTitle,
+        message: t.dialogNewMsg,
         action: () => {
           setItems([]);
           setHistory([]);
@@ -175,21 +238,21 @@ function App() {
           setNewStore(''); 
           setOpenStores([]);
           setShowArchives(false);
-          showToast("¡Lista nueva creada!", "success");
+          showToast(t.toastEmpty, "success");
         }
       });
     } else {
       setListName("");
-      showToast("Lista nueva lista", "success");
+      showToast(t.toastEmpty, "success");
     }
   };
 
   const handleSaveList = () => {
     if (items.length === 0) {
-      showToast("La lista está vacía, añade algo antes.", "error");
+      showToast(t.toastEmpty, "error");
       return;
     }
-    const nameToSave = listName.trim() || "Lista sin nombre";
+    const nameToSave = listName.trim() || t.placeholderName;
     const listToSave = {
       id: Date.now(),
       name: nameToSave,
@@ -197,7 +260,7 @@ function App() {
       items: items
     };
     setSavedLists([listToSave, ...savedLists]);
-    showToast(`Lista "${nameToSave}" guardada correctamente.`);
+    showToast(t.toastSaved);
   };
 
   const requestLoadList = (archivedList) => {
@@ -207,14 +270,14 @@ function App() {
       setHistory([]); 
       setFuture([]);
       setShowArchives(false); 
-      showToast("Lista cargada", "success");
+      showToast(t.toastSaved, "success");
     };
 
     if (items.length > 0) {
       setConfirmDialog({
         show: true,
-        title: "Cargar Lista",
-        message: `¿Cargar la lista "${archivedList.name}"? Esto reemplazará lo que tienes en pantalla.`,
+        title: t.dialogLoadTitle,
+        message: t.dialogLoadMsg,
         action: load
       });
     } else {
@@ -225,37 +288,41 @@ function App() {
   const requestDeleteArchived = (id) => {
     setConfirmDialog({
       show: true,
-      title: "Eliminar Archivo",
-      message: "¿Eliminar esta lista guardada para siempre?",
+      title: t.dialogDeleteFileTitle,
+      message: t.dialogDeleteFileMsg,
       action: () => {
         setSavedLists(savedLists.filter(l => l.id !== id));
-        showToast("Lista eliminada de archivos", "success");
+        showToast(t.toastDeleted, "success");
       }
     });
   };
 
   const shareList = () => {
     const pendingItems = items.filter(item => !item.done);
-    if (pendingItems.length === 0) { showToast("¡Nada pendiente para compartir!", "error"); return; }
+    if (pendingItems.length === 0) { showToast(t.toastEmpty, "error"); return; }
     
     const grouped = pendingItems.reduce((acc, item) => {
       if (!acc[item.store]) acc[item.store] = [];
-      acc[item.store].push(item.name);
+      const qtyText = (item.quantity && item.quantity > 1) ? `(${item.quantity}) ` : '';
+      acc[item.store].push(`${qtyText}${item.name}`);
       return acc;
     }, {});
     
-    let message = `🛒 *${listName.toUpperCase() || "MI COMPRA"}*\n\n`; 
+    let message = `🛒 *${listName.toUpperCase() || t.appName}*\n\n`; 
     Object.keys(grouped).sort().forEach(store => {
       message += `🏪 *${store.toUpperCase()}*\n`;
-      grouped[store].forEach(product => { message += `- ${product}\n`; });
+      grouped[store].forEach(productString => { message += `- ${productString}\n`; });
       message += "\n";
     });
 
     const jsonItems = JSON.stringify(items);
-    const appUrl = window.location.origin + window.location.pathname; 
-    const shareUrl = `${appUrl}?data=${encodeURIComponent(jsonItems)}&name=${encodeURIComponent(listName)}`;
+    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "PON_AQUI_TU_ENLACE_DE_NETLIFY") 
+      ? PUBLIC_URL 
+      : window.location.origin + window.location.pathname;
 
-    message += `\n📲 *Abre la lista en la App aquí:*\n${shareUrl}`;
+    const shareUrl = `${baseUrl}?data=${encodeURIComponent(jsonItems)}&name=${encodeURIComponent(listName)}`;
+
+    message += `\n📲 *App Link:*\n${shareUrl}`;
 
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -277,11 +344,11 @@ function App() {
     e.stopPropagation(); 
     setConfirmDialog({
       show: true,
-      title: "Eliminar Tienda",
-      message: `¿Eliminar "${storeToDelete}" de tus tiendas guardadas?`,
+      title: t.deleteStoreTitle,
+      message: `${t.deleteStoreMsg} ("${storeToDelete}")`,
       action: () => {
         setAvailableStores(availableStores.filter(s => s !== storeToDelete));
-        showToast("Tienda eliminada", "success");
+        showToast(t.toastDeleted, "success");
       }
     });
   };
@@ -290,11 +357,11 @@ function App() {
     e.stopPropagation(); 
     setConfirmDialog({
       show: true,
-      title: "Eliminar Producto",
-      message: `¿Eliminar "${productToDelete}" de tus sugerencias frecuentes?`,
+      title: t.deleteProductTitle,
+      message: `${t.deleteProductMsg} ("${productToDelete}")`,
       action: () => {
         setCatalog(catalog.filter(p => p !== productToDelete));
-        showToast("Producto eliminado del historial", "success");
+        showToast(t.toastDeleted, "success");
       }
     });
   };
@@ -305,7 +372,7 @@ function App() {
     saveToHistory();
     
     const finalStoreName = storeNameInput.trim() === '' ? 'General' : storeNameInput.trim();
-    const itemObj = { id: Date.now(), name: productName, store: finalStoreName, done: false };
+    const itemObj = { id: Date.now(), name: productName, store: finalStoreName, done: false, quantity: 1 };
     setItems(prev => [...prev, itemObj]); 
     
     if (!catalog.includes(productName)) setCatalog(prev => [...prev, productName]);
@@ -319,7 +386,7 @@ function App() {
     setIsProductOpen(false); 
     
     if(productInputRef.current) productInputRef.current.focus();
-    showToast("Producto añadido");
+    showToast(t.toastAdded);
   };
 
   const addItem = (e) => {
@@ -364,40 +431,129 @@ function App() {
   const deleteItem = (id) => {
     saveToHistory();
     setItems(items.filter(item => item.id !== id));
-    showToast("Producto borrado de la lista", "info");
+    showToast(t.toastDeleted, "info");
   };
 
-  const currentTabItems = items.filter(item => item.store === activeTab);
+  // --- ORDENACIÓN INTELIGENTE ---
+  const currentTabItems = items
+    .filter(item => item.store === activeTab)
+    .sort((a, b) => {
+      if (a.done === b.done) return 0;
+      return a.done ? 1 : -1;
+    });
+
+  // --- PANTALLA 1: SELECCIÓN DE IDIOMA ---
+  if (!language) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-700 flex flex-col items-center justify-center p-6">
+        <div className="bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-2xl max-w-md w-full animate-in fade-in zoom-in duration-500 border border-white/50">
+          <div className="text-center mb-8">
+            <span className="text-6xl mb-4 block filter drop-shadow-sm">🌍</span>
+            <h1 className="text-3xl font-black text-gray-800 mb-2 tracking-tight">Buy List</h1>
+            <p className="text-gray-600 font-medium">Select your language <br/> Elige tu idioma</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {LANGUAGES.map(lang => (
+              <button
+                key={lang.code}
+                onClick={() => handleSelectLanguage(lang.code)}
+                className="flex items-center gap-4 p-3 rounded-2xl border-2 border-white/50 bg-white/80 backdrop-blur-sm hover:border-emerald-500 hover:bg-white transition-all group shadow-sm"
+              >
+                <img 
+                  src={lang.flagUrl} 
+                  alt={lang.label} 
+                  className="w-10 h-auto rounded-md shadow-sm group-hover:scale-110 transition-transform"
+                />
+                <div>
+                   <span className="block font-black text-gray-800 text-lg">{lang.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- PANTALLA 2: TUTORIAL ---
+  if (showTutorial) {
+    const steps = t.tutorial; 
+    const currentStepData = steps[tutorialStep];
+    const bgColors = ["bg-emerald-500", "bg-indigo-500", "bg-orange-400", "bg-orange-500", "bg-blue-500", "bg-purple-500", "bg-green-600", "bg-emerald-600"];
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in p-4">
+        <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl relative flex flex-col min-h-[500px] transition-colors">
+          <div className={`h-40 ${bgColors[tutorialStep] || "bg-gray-500"} flex items-center justify-center transition-colors duration-500`}>
+            <span className="text-8xl animate-bounce filter drop-shadow-lg">{currentStepData.emoji}</span>
+          </div>
+          
+          <div className="p-8 flex-1 flex flex-col justify-between text-center">
+            <div>
+              <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-4">{currentStepData.title}</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">{currentStepData.desc}</p>
+            </div>
+
+            <div className="mt-8">
+              <div className="flex justify-center gap-2 mb-6">
+                {steps.map((_, idx) => (
+                  <div key={idx} className={`h-2 w-2 rounded-full transition-all duration-300 ${idx === tutorialStep ? 'bg-gray-800 dark:bg-white w-6' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 justify-center">
+                {tutorialStep > 0 && (
+                  <button onClick={prevStep} className="px-6 py-3 rounded-xl bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-white font-bold hover:bg-gray-200 dark:hover:bg-slate-600 transition">
+                    {t.tutBack}
+                  </button>
+                )}
+                <button onClick={nextStep} className={`px-8 py-3 rounded-xl text-white font-bold shadow-lg transition transform active:scale-95 flex-1 ${bgColors[tutorialStep] || "bg-gray-800"}`}>
+                  {tutorialStep === steps.length - 1 ? t.tutStart : t.tutNext}
+                </button>
+              </div>
+              
+              {tutorialStep < steps.length - 1 && (
+                 <button onClick={completeTutorial} className="mt-4 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline">
+                   {t.tutSkip}
+                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // --- VISTA DE ARCHIVOS (MODAL) ---
   if (showArchives) {
     return (
-      <div className="app-container">
-        <div className="main-card relative">
-          <div className="p-6 bg-emerald-600 text-white shadow-lg sticky top-0 z-30">
+      <div className={`app-container dark:bg-slate-900 ${largeText ? 'text-lg' : ''}`}>
+        <div className="main-card relative dark:bg-slate-900">
+          <div className="p-6 bg-emerald-600 dark:bg-emerald-800 text-white shadow-lg sticky top-0 z-30">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">📂 Mis Listas</h2>
+              <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
               <button onClick={() => setShowArchives(false)} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">
-                ✕ Cerrar
+                {t.closeBtn}
               </button>
             </div>
           </div>
           
-          <div className="p-4 space-y-4 overflow-y-auto bg-gray-50 h-full pb-20">
+          <div className="p-4 space-y-4 overflow-y-auto bg-gray-50 dark:bg-slate-900 h-full pb-20">
             {savedLists.length === 0 ? (
-              <p className="text-center text-gray-400 mt-10">No tienes listas guardadas aún.</p>
+              <p className="text-center text-gray-400 mt-10">{t.emptyArchives}</p>
             ) : (
               savedLists.map(list => (
-                <div key={list.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                <div key={list.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 flex justify-between items-center">
                   <div>
-                    <h3 className="font-bold text-gray-800 text-lg">{list.name}</h3>
-                    <p className="text-xs text-gray-500">📅 {list.date} • {list.items.length} productos</p>
+                    <h3 className="font-bold text-gray-800 dark:text-white">{list.name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">📅 {list.date} • {list.items.length} p.</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => requestLoadList(list)} className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-emerald-200 transition">
-                      Recuperar
+                    <button onClick={() => requestLoadList(list)} className="bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-lg text-sm font-medium hover:bg-emerald-200 dark:hover:bg-emerald-800 transition">
+                      {t.recoverBtn}
                     </button>
-                    <button onClick={() => requestDeleteArchived(list.id)} className="bg-red-50 text-red-500 px-3 py-1 rounded-lg text-sm hover:bg-red-100 transition">
+                    <button onClick={() => requestDeleteArchived(list.id)} className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 px-3 py-1 rounded-lg text-sm hover:bg-red-100 dark:hover:bg-red-900/50 transition">
                       🗑
                     </button>
                   </div>
@@ -406,106 +562,127 @@ function App() {
             )}
           </div>
         </div>
-        {/* COMPONENTES FLOTANTES */}
         {confirmDialog.show && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform transition-all scale-100">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{confirmDialog.title}</h3>
-              <p className="text-gray-600 mb-6">{confirmDialog.message}</p>
-              <div className="flex justify-end gap-3">
-                <button onClick={closeDialog} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-                <button onClick={confirmAction} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium shadow-lg shadow-red-200">Confirmar</button>
-              </div>
-            </div>
-          </div>
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl">
+                 <h3 className="font-bold text-lg mb-2 dark:text-white">{confirmDialog.title}</h3>
+                 <p className="mb-4 dark:text-gray-300">{confirmDialog.message}</p>
+                 <div className="flex justify-end gap-2">
+                     <button onClick={closeDialog} className="px-4 py-2 text-gray-500">{t.cancelBtn}</button>
+                     <button onClick={confirmAction} className="px-4 py-2 bg-red-500 text-white rounded-lg">{t.confirmBtn}</button>
+                 </div>
+             </div>
+           </div>
         )}
       </div>
     );
   }
 
-  // --- VISTA PRINCIPAL ---
+  // --- VISTA PRINCIPAL (APP) ---
   return (
-    <div className="app-container">
-      <div className="main-card">
+    // AQUÍ ESTÁ EL CAMBIO CLAVE: Controlamos el degradado vs color oscuro en el className
+    <div className={`app-container transition-colors duration-300 ${darkMode ? 'dark bg-slate-950' : 'bg-gradient-to-br from-lime-50 via-white to-orange-50'} ${largeText ? 'text-lg' : ''}`}>
+      <div className="main-card dark:bg-slate-900 dark:border-slate-800 transition-colors duration-300">
         
         {/* HEADER */}
-        <div className="header-section">
+        <div className="header-section dark:from-emerald-900 dark:to-teal-900 transition-colors duration-300">
           
-          {/* BARRA SUPERIOR */}
+          <div className="flex justify-center items-center gap-3 mb-4 relative">
+              <div className="flex items-center gap-2">
+                <span className="text-4xl filter drop-shadow-md">🛒</span>
+                <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md italic">{t.appName}</h1>
+              </div>
+              
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex gap-2">
+                
+                {/* BOTÓN TAMAÑO DE TEXTO */}
+                <button 
+                  onClick={() => setLargeText(!largeText)} 
+                  className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md"
+                  title="Toggle Text Size"
+                >
+                  <span className="text-lg font-bold">Aa</span>
+                </button>
+
+                {/* BOTÓN MODO OSCURO */}
+                <button 
+                  onClick={() => setDarkMode(!darkMode)} 
+                  className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md"
+                  title="Toggle Dark Mode"
+                >
+                  <span className="text-xl">{darkMode ? '☀️' : '🌙'}</span>
+                </button>
+
+                {/* BOTÓN IDIOMA */}
+                <button 
+                  onClick={() => setLanguage(null)} 
+                  className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md overflow-hidden"
+                  title="Change Language"
+                >
+                  <img 
+                    src={LANGUAGES.find(l => l.code === language)?.flagUrl} 
+                    alt="Language" 
+                    className="w-full h-full object-cover opacity-90 hover:opacity-100"
+                  />
+                </button>
+              </div>
+          </div>
+
           <div className="flex flex-col gap-3 mb-4 border-b border-white/20 pb-4">
             <div className="flex justify-between items-center gap-3">
                <input 
                  type="text" 
                  value={listName} 
                  onChange={(e) => setListName(e.target.value)}
-                 onKeyDown={handleListNameKeyDown} // <-- CIERRA TECLADO AL PULSAR INTRO
-                 enterKeyHint="done" // <-- MUESTRA "HECHO" EN EL TECLADO MÓVIL
+                 onKeyDown={handleListNameKeyDown} 
+                 enterKeyHint="done" 
                  className="bg-white/20 text-white font-bold text-xl focus:outline-none focus:bg-white/30 rounded-lg px-3 py-2 w-full placeholder-white/60 border border-white/10"
-                 placeholder="Pon nombre a tu lista"
+                 placeholder={t.placeholderName}
                />
                
                <button 
                   onClick={() => setShowArchives(true)} 
                   className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 h-11 rounded-lg flex items-center gap-1 transition border border-white/10 whitespace-nowrap"
-                  title="Ver listas guardadas"
                >
-                 📂 Listas guardadas
+                 {t.savedListsBtn}
                </button>
             </div>
             
             <div className="flex gap-2 justify-end">
                <button onClick={requestNewList} className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg transition border border-white/10">
-                 ✨ Nueva
+                 {t.newListBtn}
                </button>
                <button onClick={handleSaveList} className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg transition border border-white/10">
-                 💾 Guardar
+                 {t.saveBtn}
                </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-3xl filter drop-shadow-md">🛒</span>
-              <h1 className="text-2xl font-black tracking-tight text-white drop-shadow-md italic">Buy List</h1>
-              
+          <div className="mb-6 flex justify-center">
               <button 
                 onClick={shareList} 
-                className="ml-3 bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-sm px-4 py-2 rounded-full shadow-lg flex items-center gap-2 transition-all transform hover:scale-105"
-                title="Compartir por WhatsApp"
+                className="w-full bg-white dark:bg-slate-800 dark:text-green-400 text-[#25D366] hover:bg-green-50 dark:hover:bg-slate-700 font-bold text-sm px-4 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02]"
               >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.664-.698c.983.565 1.761.792 2.796.793 3.18 0 5.768-2.587 5.768-5.767s-2.588-5.767-5.768-5.767zm0 9.873c-.863 0-1.57-.22-2.316-.622l-1.371.36.368-1.325c-.456-.757-.665-1.391-.664-2.52 0-2.264 1.842-4.106 4.105-4.106 2.265 0 4.107 1.842 4.107 4.106 0 2.264-1.842 4.107-4.106 4.107z"/>
+                {/* SVG ORIGINAL RESTAURADO */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
                 </svg>
-                <span>Compartir</span>
+                <span className="text-base text-gray-700 dark:text-green-400">{t.shareBtn}</span>
               </button>
-            </div>
-            
-            <div className="flex bg-black/20 rounded-full p-1 backdrop-blur-md">
-              <button onClick={handleUndo} disabled={history.length === 0}
-                className={`px-3 py-1 text-xs rounded-l-full flex items-center gap-1 transition-colors ${history.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>
-                <span>↩</span> Atrás
-              </button>
-              <div className="w-px bg-white/20 mx-1"></div>
-              <button onClick={handleRedo} disabled={future.length === 0}
-                className={`px-3 py-1 text-xs rounded-r-full flex items-center gap-1 transition-colors ${future.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>
-                Adelante <span>↪</span>
-              </button>
-            </div>
           </div>
 
           <form onSubmit={addItem} className="flex flex-col gap-3">
             <div className="flex gap-2 items-end">
               
-              {/* BLOQUE PRODUCTO */}
               <div className="flex-1 relative group">
                 <label className="block text-xs font-bold text-emerald-100 mb-1 ml-1 uppercase tracking-wide">
-                  Elige tus productos
+                  {t.productLabel}
                 </label>
                 <input 
                   ref={productInputRef} 
                   type="text" 
-                  placeholder="¿Qué te apetece hoy?" 
-                  className="input-field"
+                  placeholder={t.addProductPlaceholder} 
+                  className="input-field dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:placeholder-gray-400"
                   value={newItem} 
                   onChange={(e) => { setNewItem(e.target.value); setIsProductOpen(true); }} 
                   onKeyDown={handleProductKeyDown}
@@ -516,24 +693,21 @@ function App() {
                 {isProductOpen && filteredCatalog.length > 0 && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsProductOpen(false)}></div>
-                    <ul className="absolute top-full mt-2 left-0 w-full bg-white rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 py-2 animate-in fade-in zoom-in-95 duration-200">
+                    <ul className="absolute top-full mt-2 left-0 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 dark:text-gray-200 py-2 animate-in fade-in zoom-in-95 duration-200">
                       {filteredCatalog.map((suggestion, index) => (
                         <li 
                           key={index} 
-                          className="px-4 py-2 hover:bg-orange-50 hover:text-orange-700 cursor-pointer text-sm flex justify-between items-center transition-colors border-b border-gray-50 last:border-0 group"
+                          className="px-4 py-2 hover:bg-orange-50 dark:hover:bg-slate-700 hover:text-orange-700 dark:hover:text-orange-400 cursor-pointer text-sm flex justify-between items-center transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0 group"
                           onClick={() => handleSuggestionClick(suggestion)} 
                         >
                           <span className="font-medium flex-1">{suggestion}</span>
                           <div className="flex items-center gap-2">
-                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full group-hover:bg-orange-100 group-hover:text-orange-600">Añadir</span>
+                             <span className="text-xs text-gray-400 bg-gray-100 dark:bg-slate-600 dark:text-gray-300 px-2 py-1 rounded-full group-hover:bg-orange-100 group-hover:text-orange-600">{t.addLabel}</span>
                              <button 
                                onClick={(e) => requestDeleteProductFromCatalog(e, suggestion)}
                                className="p-1.5 rounded-full text-gray-300 hover:bg-red-100 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                               title="Eliminar producto"
                              >
-                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                 <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                               </svg>
+                               x
                              </button>
                           </div>
                         </li>
@@ -543,23 +717,22 @@ function App() {
                 )}
               </div>
 
-              {/* BLOQUE TIENDA */}
               <div className="w-1/3 relative group">
                 <label className="block text-xs font-bold text-emerald-100 mb-1 ml-1 uppercase tracking-wide truncate">
-                  Tienda o Súper
+                  {t.storeLabel}
                 </label>
                 <div className="flex relative h-full">
                   <input 
                     type="text" 
-                    placeholder="Escribe..." 
-                    className="input-field pr-8"
+                    placeholder={t.storePlaceholder} 
+                    className="input-field pr-8 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:placeholder-gray-400"
                     value={newStore} 
                     onKeyDown={handleStoreKeyDown} 
                     onChange={(e) => { setNewStore(e.target.value); setIsStoreOpen(true); }} 
                     onFocus={() => setIsStoreOpen(true)} 
                     enterKeyHint="go"
                   />
-                  <button type="button" onClick={() => setIsStoreOpen(!isStoreOpen)} className="absolute right-0 top-0 h-full px-3 text-emerald-600 hover:text-emerald-800 cursor-pointer">
+                  <button type="button" onClick={() => setIsStoreOpen(!isStoreOpen)} className="absolute right-0 top-0 h-full px-3 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                   </button>
                 </div>
@@ -567,14 +740,14 @@ function App() {
                 {isStoreOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsStoreOpen(false)}></div>
-                    <ul className="absolute top-full mt-2 left-0 w-full bg-white rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 py-2 animate-in fade-in zoom-in-95 duration-200">
+                    <ul className="absolute top-full mt-2 left-0 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 dark:text-gray-200 py-2 animate-in fade-in zoom-in-95 duration-200">
                       
-                      <li className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 border-b border-gray-100 cursor-default sticky top-0 z-10">
-                        Elige tienda o supermercado
+                      <li className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600 cursor-default sticky top-0 z-10">
+                        {t.storeSelectTitle}
                       </li>
 
                       {sortedAvailableStores.map((store, index) => (
-                        <li key={index} className="px-4 py-2 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer text-sm flex justify-between items-center transition-colors group"
+                        <li key={index} className="px-4 py-2 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:text-emerald-700 dark:hover:text-emerald-400 cursor-pointer text-sm flex justify-between items-center transition-colors group"
                           onClick={() => { setNewStore(store); openStoreTab(store); setIsStoreOpen(false); if(productInputRef.current) productInputRef.current.focus(); }}>
                           
                           <span className="flex-1">{store}</span>
@@ -582,11 +755,8 @@ function App() {
                           <button 
                             onClick={(e) => requestDeleteStoreFromCatalog(e, store)}
                             className="p-1.5 rounded-full text-gray-300 hover:bg-red-100 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                            title="Eliminar tienda"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
+                            x
                           </button>
 
                         </li>
@@ -598,22 +768,37 @@ function App() {
             </div>
             
             <button type="submit" className="btn-add">
-              <span>➕</span> Añadir a la cesta
+              <span>➕</span> {t.addBtn}
             </button>
           </form>
+
+          <div className="flex justify-center mt-4">
+             <div className="flex bg-black/20 rounded-full p-1 backdrop-blur-md">
+                <button onClick={handleUndo} disabled={history.length === 0}
+                  className={`px-3 py-1 text-xs rounded-l-full flex items-center gap-1 transition-colors ${history.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>
+                  <span>↩</span> {t.backBtn}
+                </button>
+                <div className="w-px bg-white/20 mx-1"></div>
+                <button onClick={handleRedo} disabled={future.length === 0}
+                  className={`px-3 py-1 text-xs rounded-r-full flex items-center gap-1 transition-colors ${future.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>
+                  {t.nextBtn} <span>↪</span>
+                </button>
+             </div>
+          </div>
+
         </div>
 
         {/* TABS */}
-        <div className="flex overflow-x-auto bg-gray-50/50 border-b border-gray-100 scrollbar-hide p-2 gap-2">
+        <div className="flex overflow-x-auto bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 scrollbar-hide p-2 gap-2">
           {sortedOpenStores.length === 0 ? (
-            <div className="p-4 text-gray-400 text-sm italic w-full text-center flex items-center justify-center gap-2"><span>👆</span> Selecciona un súper arriba</div>
+            <div className="p-4 text-gray-400 text-sm italic w-full text-center flex items-center justify-center gap-2"><span>👆</span> {t.selectStore}</div>
           ) : (
             sortedOpenStores.map(store => (
               <div key={store} onClick={() => setActiveTab(store)}
-                className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive'}`}>
+                className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive dark:text-gray-400 dark:bg-slate-800 dark:hover:bg-slate-700'}`}>
                 {store}
-                <button onClick={(e) => closeStoreTab(e, store)} className={`w-5 h-5 flex items-center justify-center rounded-full transition opacity-50 group-hover:opacity-100 ${activeTab === store ? 'hover:bg-red-100 text-red-400' : 'hover:bg-gray-200 text-gray-400'}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                <button onClick={(e) => closeStoreTab(e, store)} className={`w-5 h-5 flex items-center justify-center rounded-full transition opacity-50 group-hover:opacity-100 ${activeTab === store ? 'hover:bg-red-100 text-red-400' : 'hover:bg-gray-200 text-gray-400 dark:hover:bg-slate-600'}`}>
+                  x
                 </button>
               </div>
             ))
@@ -621,30 +806,39 @@ function App() {
         </div>
 
         {/* LISTA */}
-        <div className="flex-1 overflow-y-auto relative bg-white/50 z-0">
+        <div className="flex-1 overflow-y-auto relative bg-white/50 dark:bg-slate-900 z-0">
           {!activeTab ? (
-             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300 space-y-4">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-4xl shadow-inner">🧾</div>
-                <p>Tu lista está vacía</p>
+             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300 dark:text-slate-700 space-y-4">
+                <div className="w-24 h-24 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-4xl shadow-inner">🧾</div>
+                <p>{t.emptyList}</p>
              </div>
           ) : (
             <>
               {currentTabItems.length === 0 ? (
                  <div className="flex flex-col items-center justify-center h-full text-gray-400">
                     <span className="text-4xl mb-2 opacity-50">🛒</span>
-                    <p className="text-sm font-medium">Lista vacía para <span className="text-emerald-600">{activeTab}</span></p>
+                    <p className="text-sm font-medium">{t.emptyList} <span className="text-emerald-600 dark:text-emerald-400">{activeTab}</span></p>
                  </div>
               ) : (
                 <ul className="pb-20 p-2 space-y-2"> 
                   {currentTabItems.map(item => (
-                    <li key={item.id} className="list-item-container group">
+                    <li key={item.id} className="list-item-container group dark:bg-slate-800 dark:border-slate-700 dark:shadow-none">
+                      
+                      {/* CONTADOR DE CANTIDAD */}
+                      <div className="flex flex-col items-center mr-3 space-y-1">
+                        <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold hover:bg-emerald-100 transition">＋</button>
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">x{item.quantity || 1}</span>
+                        <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-red-100 hover:text-red-500 transition">－</button>
+                      </div>
+
                       <div onClick={() => toggleItem(item.id)} className="flex items-center cursor-pointer flex-1 select-none">
-                        <div className={`checkbox-circle ${item.done ? 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm' : 'border-gray-300 bg-gray-50 group-hover:border-emerald-400'}`}>
+                        <div className={`checkbox-circle ${item.done ? 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm' : 'border-gray-300 dark:border-slate-500 bg-gray-50 dark:bg-slate-900 group-hover:border-emerald-400'}`}>
                           {item.done && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                         </div>
-                        <span className={`text-lg font-medium transition-all duration-300 ${item.done ? 'line-through text-gray-400 decoration-emerald-500/50 decoration-2' : 'text-gray-700'}`}>{item.name}</span>
+                        <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-slate-600 decoration-emerald-500/50 decoration-2' : 'text-gray-700 dark:text-slate-200'}`}>{item.name}</span>
                       </div>
-                      <button onClick={() => deleteItem(item.id)} className="p-2 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                      
+                      <button onClick={() => deleteItem(item.id)} className="p-2 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                       </button>
                     </li>
@@ -657,17 +851,15 @@ function App() {
 
       </div>
 
-      {/* COMPONENTES FLOTANTES (UI) */}
-      
-      {/* DIALOG DE CONFIRMACIÓN */}
+      {/* DIÁLOGO DE CONFIRMACIÓN */}
       {confirmDialog.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform transition-all scale-100">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">{confirmDialog.title}</h3>
-            <p className="text-gray-600 mb-6">{confirmDialog.message}</p>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform transition-all scale-100 dark:bg-slate-800">
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{confirmDialog.title}</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">{confirmDialog.message}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={closeDialog} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg transition font-medium">Cancelar</button>
-              <button onClick={confirmAction} className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition font-medium shadow-md">Confirmar</button>
+              <button onClick={closeDialog} className="px-4 py-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 rounded-lg transition">{t.cancelBtn}</button>
+              <button onClick={confirmAction} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium shadow-lg shadow-red-200">{t.confirmBtn}</button>
             </div>
           </div>
         </div>
