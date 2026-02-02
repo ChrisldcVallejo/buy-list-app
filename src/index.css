@@ -5,18 +5,16 @@
 @layer components {
   /* --- CONTENEDORES --- */
   .app-container {
+    /* Permitimos que la altura crezca con el contenido (scroll natural) */
     @apply min-h-screen w-full bg-gray-100 dark:bg-slate-950 transition-colors duration-300 font-sans text-gray-700 flex flex-col p-0 md:p-8;
   }
 
   .main-card {
+    /* Quitamos restricciones de altura y overflow para scroll general */
     @apply w-full max-w-xl mx-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl md:rounded-3xl shadow-2xl border-x md:border border-white/50 dark:border-slate-800 flex flex-col min-h-screen md:min-h-0 transition-all duration-300 relative;
   }
 
-  /* --- CABECERA PEGAJOSA (STICKY) --- */
-  .sticky-header-wrapper {
-    @apply sticky top-0 z-40 bg-gray-100/95 dark:bg-slate-900/95 backdrop-blur-md transition-colors duration-300 md:rounded-t-3xl border-b border-gray-200 dark:border-slate-800 shadow-sm;
-  }
-
+  /* --- CABECERA (Ya no es sticky) --- */
   .header-section {
     @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg relative md:rounded-t-3xl;
   }

@@ -1,3 +1,5 @@
+// src/translations.js
+
 export const LANGUAGES = [
   { code: "es", label: "Español", flagUrl: "https://flagcdn.com/w80/es.png" },
   { code: "en", label: "English", flagUrl: "https://flagcdn.com/w80/gb.png" },
@@ -29,6 +31,7 @@ export const TRANSLATIONS = {
     selectStore: "Selecciona un súper arriba",
     toastAdded: "Producto añadido",
     toastDeleted: "Producto borrado",
+    toastStoreDeleted: "Tienda eliminada",
     toastUndo: "Deshacer realizado",
     toastRedo: "Rehacer realizado",
     toastSaved: "Lista guardada correctamente",
@@ -118,6 +121,7 @@ export const TRANSLATIONS = {
     selectStore: "Select a store above",
     toastAdded: "Product added",
     toastDeleted: "Product deleted",
+    toastStoreDeleted: "Store deleted",
     toastUndo: "Undo successful",
     toastRedo: "Redo successful",
     toastSaved: "List saved successfully",
@@ -206,6 +210,7 @@ export const TRANSLATIONS = {
     selectStore: "Wähle ein Geschäft oben",
     toastAdded: "Produkt hinzugefügt",
     toastDeleted: "Produkt gelöscht",
+    toastStoreDeleted: "Geschäft gelöscht",
     toastUndo: "Rückgängig gemacht",
     toastRedo: "Wiederhergestellt",
     toastSaved: "Liste gespeichert",
@@ -294,6 +299,7 @@ export const TRANSLATIONS = {
     selectStore: "Sélectionnez un magasin",
     toastAdded: "Produit ajouté",
     toastDeleted: "Produit supprimé",
+    toastStoreDeleted: "Magasin supprimé",
     toastUndo: "Annulé",
     toastRedo: "Rétabli",
     toastSaved: "Liste sauvegardée",
@@ -382,6 +388,7 @@ export const TRANSLATIONS = {
     selectStore: "Seleziona un negozio sopra",
     toastAdded: "Prodotto aggiunto",
     toastDeleted: "Prodotto eliminato",
+    toastStoreDeleted: "Negozio eliminato",
     toastUndo: "Annullato",
     toastRedo: "Rifatto",
     toastSaved: "Lista salvata",
@@ -470,6 +477,7 @@ export const TRANSLATIONS = {
     selectStore: "Selecione uma loja acima",
     toastAdded: "Produto adicionado",
     toastDeleted: "Produto apagado",
+    toastStoreDeleted: "Loja apagada",
     toastUndo: "Desfeito",
     toastRedo: "Refeito",
     toastSaved: "Lista salva com sucesso",

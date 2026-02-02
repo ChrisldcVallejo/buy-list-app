@@ -109,17 +109,14 @@ function App() {
   // --- GESTIÓN DE NAVEGACIÓN (BOTÓN ATRÁS) ---
   useEffect(() => {
     const handlePopState = (event) => {
-      // 1. Si hay preview abierta, cerrar
       if (previewList) {
         setPreviewList(null);
         return;
       }
-      // 2. Si hay archivos abiertos, cerrar
       if (showArchives) {
         setShowArchives(false);
         return;
       }
-      // 3. (CORRECCIÓN) Si estamos en selector de idioma (language es null) y damos atrás
       if (language === null) {
         const stored = localStorage.getItem('app-language') || 'es';
         setLanguage(stored);
@@ -309,11 +306,15 @@ function App() {
     setItems(items.filter(i => i.store !== storeName));
   };
 
+  // --- BORRAR TIENDA (NUEVO MENSAJE) ---
   const requestDeleteStoreFromCatalog = (e, storeToDelete) => {
     e.stopPropagation(); 
     setConfirmDialog({
       show: true, title: t.deleteStoreTitle, message: `${t.deleteStoreMsg} ("${storeToDelete}")`,
-      action: () => { setAvailableStores(availableStores.filter(s => s !== storeToDelete)); showToast(t.toastDeleted, "success"); }
+      action: () => { 
+        setAvailableStores(availableStores.filter(s => s !== storeToDelete)); 
+        showToast(t.toastStoreDeleted, "success"); // NUEVO KEY
+      }
     });
   };
 
@@ -348,14 +349,13 @@ function App() {
   const handleSuggestionClick = (s) => { performAdd(s, newStore); };
   const handleProductKeyDown = (e) => { if (e.key === 'Enter') { e.preventDefault(); performAdd(newItem, newStore); } };
 
-  // --- (CORRECCIÓN) INPUT TIENDA & TECLADO ---
+  // --- INPUT TIENDA & TECLADO ---
   const handleStoreKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (newItem.trim()) {
         performAdd(newItem, newStore);
       } else {
-        // Modo "Crear Solo Tienda"
         const storeName = newStore.trim();
         if (!storeName) return;
         
@@ -363,9 +363,7 @@ function App() {
         if (!storeExists) setAvailableStores([...availableStores, storeName]);
         openStoreTab(storeName);
         setIsStoreOpen(false);
-        // Quitamos foco para cerrar teclado
         e.target.blur();
-        // Limpiamos input para permitir añadir otra tienda
         setNewStore(''); 
       }
     }
@@ -518,9 +516,8 @@ function App() {
     <div className={`app-container ${largeText ? 'text-lg' : ''}`}>
       <div className="main-card">
         
-        {/* HEADER STICKY (NUEVO WRAPPER) */}
-        <div className="sticky-header-wrapper">
-          <div className="header-section">
+        {/* HEADER NO PEGAJOSO (SCROLLEA CON LA PAGINA) */}
+        <div className="header-section">
             <div className="flex flex-col md:flex-row justify-center items-center gap-3 mb-6 relative">
                 <div className="flex items-center gap-2">
                   <span className="text-4xl filter drop-shadow-md">🛒</span>
@@ -614,24 +611,23 @@ function App() {
                   <button onClick={handleRedo} disabled={future.length === 0} className={`px-3 py-1 text-xs rounded-r-full flex items-center gap-1 transition-colors ${future.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/20 text-white cursor-pointer'}`}>{t.nextBtn} <span>↪</span></button>
                </div>
             </div>
-          </div>
-          
-          {/* TABS TAMBIÉN STICKY */}
-          <div className="flex overflow-x-auto bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 scrollbar-hide p-2 gap-2 backdrop-blur-sm">
-            {sortedOpenStores.length === 0 ? (
-              <div className="p-4 text-gray-400 text-sm italic w-full text-center flex items-center justify-center gap-2"><span>👆</span> {t.selectStore}</div>
-            ) : (
-              sortedOpenStores.map(store => (
-                <div key={store} onClick={() => setActiveTab(store)} className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive dark:text-gray-400 dark:bg-slate-800 dark:hover:bg-slate-700'}`}>
-                  {store}
-                  <button onClick={(e) => closeStoreTab(e, store)} className={`w-5 h-5 flex items-center justify-center rounded-full transition opacity-50 group-hover:opacity-100 ${activeTab === store ? 'hover:bg-red-100 text-red-400' : 'hover:bg-gray-200 text-gray-400 dark:hover:bg-slate-600'}`}>x</button>
-                </div>
-              ))
-            )}
-          </div>
+        </div>
+        
+        {/* TABS TAMBIÉN SE MUEVEN (ya no son sticky) */}
+        <div className="flex overflow-x-auto bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 scrollbar-hide p-2 gap-2 backdrop-blur-sm">
+          {sortedOpenStores.length === 0 ? (
+            <div className="p-4 text-gray-400 text-sm italic w-full text-center flex items-center justify-center gap-2"><span>👆</span> {t.selectStore}</div>
+          ) : (
+            sortedOpenStores.map(store => (
+              <div key={store} onClick={() => setActiveTab(store)} className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive dark:text-gray-400 dark:bg-slate-800 dark:hover:bg-slate-700'}`}>
+                {store}
+                <button onClick={(e) => closeStoreTab(e, store)} className={`w-5 h-5 flex items-center justify-center rounded-full transition opacity-50 group-hover:opacity-100 ${activeTab === store ? 'hover:bg-red-100 text-red-400' : 'hover:bg-gray-200 text-gray-400 dark:hover:bg-slate-600'}`}>x</button>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* LISTA (AHORA CRECE LIBREMENTE) */}
+        {/* LISTA (AHORA CRECE LIBREMENTE PARA OCUPAR TODA LA PANTALLA) */}
         <div className="flex-1 relative bg-white/50 dark:bg-slate-900 z-0 p-2 min-h-[300px]">
           {!activeTab ? (
              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300 dark:text-slate-700 space-y-4">
