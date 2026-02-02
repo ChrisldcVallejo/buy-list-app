@@ -5,9 +5,9 @@ const DEFAULT_STORES = [];
 const PUBLIC_URL = "buy-list-mi-compra.netlify.app"; 
 
 function App() {
-  // --- ESTADOS ---
   const [language, setLanguage] = useState(() => localStorage.getItem('app-language') || null);
   
+  // --- MODO OSCURO (Estado) ---
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('app-theme');
     return saved === 'dark';
@@ -19,22 +19,18 @@ function App() {
   });
 
   const [listName, setListName] = useState(''); 
-  
   const [items, setItems] = useState(() => {
     const saved = localStorage.getItem('shopping-list');
     return saved ? JSON.parse(saved) : [];
   });
-
   const [savedLists, setSavedLists] = useState(() => {
     const saved = localStorage.getItem('shopping-archives');
     return saved ? JSON.parse(saved) : [];
   });
-
   const [catalog, setCatalog] = useState(() => {
     const saved = localStorage.getItem('shopping-catalog');
     return saved ? JSON.parse(saved) : [];
   });
-  
   const [availableStores, setAvailableStores] = useState(() => {
     const saved = localStorage.getItem('shopping-stores');
     return saved ? JSON.parse(saved) : DEFAULT_STORES;
@@ -43,46 +39,36 @@ function App() {
   const [openStores, setOpenStores] = useState(() => []);
   const [history, setHistory] = useState([]); 
   const [future, setFuture] = useState([]);   
-  
   const [newItem, setNewItem] = useState('');
   const [newStore, setNewStore] = useState(''); 
-  
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
-  
-  // Modales
   const [showArchives, setShowArchives] = useState(false);
   const [previewList, setPreviewList] = useState(null); 
-  
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('tutorial-completed'));
   const [tutorialStep, setTutorialStep] = useState(0);
-  
   const [activeTab, setActiveTab] = useState('');
   const productInputRef = useRef(null);
-
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', action: null });
 
   const t = language ? TRANSLATIONS[language] : TRANSLATIONS['es']; 
 
-  // --- ORDENACIÓN ---
   const sortedAvailableStores = [...availableStores].sort((a, b) => a.localeCompare(b));
   const sortedOpenStores = [...openStores].sort((a, b) => a.localeCompare(b));
   const filteredCatalog = catalog.filter(item => item.toLowerCase().includes(newItem.toLowerCase())).sort();
 
-  // --- EFECTOS DE PERSISTENCIA ---
+  // --- EFECTOS ---
   useEffect(() => { localStorage.setItem('shopping-list', JSON.stringify(items)); }, [items]);
   useEffect(() => { localStorage.setItem('shopping-archives', JSON.stringify(savedLists)); }, [savedLists]); 
   useEffect(() => { localStorage.setItem('shopping-catalog', JSON.stringify(catalog)); }, [catalog]);
   useEffect(() => { localStorage.setItem('shopping-stores', JSON.stringify(availableStores)); }, [availableStores]);
-  
-  useEffect(() => {
-    if (language) localStorage.setItem('app-language', language);
-  }, [language]);
+  useEffect(() => { if (language) localStorage.setItem('app-language', language); }, [language]);
 
-  // Efecto IMPORTANTE para Modo Oscuro
+  // --- EFECTO CLAVE MODO OSCURO ---
   useEffect(() => {
     localStorage.setItem('app-theme', darkMode ? 'dark' : 'light');
+    // Esto añade la clase 'dark' al HTML, activando el 'darkMode: class' del config
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -110,281 +96,116 @@ function App() {
     }
   }, [openStores, activeTab]); 
 
-  // --- GESTIÓN DE NAVEGACIÓN (BOTÓN ATRÁS) ---
+  // --- HISTORIAL DE NAVEGACION ---
   useEffect(() => {
     const handlePopState = (event) => {
-      if (previewList) {
-        setPreviewList(null);
-        return;
-      }
-      if (showArchives) {
-        setShowArchives(false);
-        return;
-      }
+      if (previewList) { setPreviewList(null); return; }
+      if (showArchives) { setShowArchives(false); return; }
       if (language === null) {
         const stored = localStorage.getItem('app-language') || 'es';
         setLanguage(stored);
       }
     };
-
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [showArchives, previewList, language]);
 
-  const openArchives = () => {
-    window.history.pushState({ view: 'archives' }, '');
-    setShowArchives(true);
-  };
+  const openArchives = () => { window.history.pushState({ view: 'archives' }, ''); setShowArchives(true); };
+  const openLanguageSelector = () => { window.history.pushState({ view: 'language' }, ''); setLanguage(null); };
+  const openPreview = (list) => { window.history.pushState({ view: 'preview' }, ''); setPreviewList(list); };
 
-  const openLanguageSelector = () => {
-    window.history.pushState({ view: 'language' }, '');
-    setLanguage(null);
-  };
-  
-  const openPreview = (list) => {
-    window.history.pushState({ view: 'preview' }, '');
-    setPreviewList(list);
-  };
-
-  // --- IMPORTAR URL ---
+  // --- IMPORT URL ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedData = params.get('data');
     const sharedName = params.get('name');
-
     if (sharedData) {
       try {
         const parsedItems = JSON.parse(decodeURIComponent(sharedData));
         const finalName = sharedName ? decodeURIComponent(sharedName) : "Lista Compartida";
         setConfirmDialog({
-          show: true,
-          title: t.dialogImportTitle,
-          message: `${t.dialogImportMsg} ("${finalName}")`,
+          show: true, title: t.dialogImportTitle, message: `${t.dialogImportMsg} ("${finalName}")`,
           action: () => {
-            setItems(parsedItems);
-            setListName(finalName);
-            setHistory([]);
-            setFuture([]);
-            showToast(t.toastSaved, "success");
-            window.history.replaceState({}, document.title, window.location.pathname);
+            setItems(parsedItems); setListName(finalName); setHistory([]); setFuture([]);
+            showToast(t.toastSaved, "success"); window.history.replaceState({}, document.title, window.location.pathname);
           }
         });
       } catch (e) { showToast("Error", "error"); }
     }
   }, [language]);
 
-  // --- HELPERS ---
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ ...toast, show: false }), 3000);
   };
-
   const closeDialog = () => setConfirmDialog({ ...confirmDialog, show: false });
   const confirmAction = () => { if (confirmDialog.action) confirmDialog.action(); closeDialog(); };
+  const handleSelectLanguage = (langCode) => { window.history.replaceState(null, '', window.location.pathname); setLanguage(langCode); };
 
-  const handleSelectLanguage = (langCode) => {
-    window.history.replaceState(null, '', window.location.pathname);
-    setLanguage(langCode);
-  };
-
-  // --- TUTORIAL ---
-  const nextStep = () => {
-    if (tutorialStep < t.tutorial.length - 1) setTutorialStep(tutorialStep + 1);
-    else completeTutorial();
-  };
+  const nextStep = () => { if (tutorialStep < t.tutorial.length - 1) setTutorialStep(tutorialStep + 1); else completeTutorial(); };
   const prevStep = () => { if (tutorialStep > 0) setTutorialStep(tutorialStep - 1); };
-  const completeTutorial = () => {
-    localStorage.setItem('tutorial-completed', 'true');
-    setShowTutorial(false);
-  };
+  const completeTutorial = () => { localStorage.setItem('tutorial-completed', 'true'); setShowTutorial(false); };
 
-  // --- LÓGICA PRINCIPAL ---
-  const handleListNameKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
-  };
-
-  const saveToHistory = () => {
-    setHistory(prev => [...prev, JSON.parse(JSON.stringify(items))]);
-    setFuture([]); 
-  };
-
-  const handleUndo = () => {
-    if (history.length === 0) return;
-    const prev = history[history.length - 1]; 
-    setFuture([JSON.parse(JSON.stringify(items)), ...future]); 
-    setItems(prev); 
-    setHistory(history.slice(0, -1)); 
-    showToast(t.toastUndo, "info");
-  };
-
-  const handleRedo = () => {
-    if (future.length === 0) return;
-    const next = future[0]; 
-    setHistory([...history, JSON.parse(JSON.stringify(items))]); 
-    setItems(next); 
-    setFuture(future.slice(1)); 
-    showToast(t.toastRedo, "info");
-  };
-
-  const updateQuantity = (id, delta) => {
-    saveToHistory();
-    setItems(items.map(i => i.id === id ? { ...i, quantity: Math.max(1, (i.quantity || 1) + delta) } : i));
-  };
+  const handleListNameKeyDown = (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+  const saveToHistory = () => { setHistory(prev => [...prev, JSON.parse(JSON.stringify(items))]); setFuture([]); };
+  const handleUndo = () => { if (history.length === 0) return; const prev = history[history.length - 1]; setFuture([JSON.parse(JSON.stringify(items)), ...future]); setItems(prev); setHistory(history.slice(0, -1)); showToast(t.toastUndo, "info"); };
+  const handleRedo = () => { if (future.length === 0) return; const next = future[0]; setHistory([...history, JSON.parse(JSON.stringify(items))]); setItems(next); setFuture(future.slice(1)); showToast(t.toastRedo, "info"); };
+  const updateQuantity = (id, delta) => { saveToHistory(); setItems(items.map(i => i.id === id ? { ...i, quantity: Math.max(1, (i.quantity || 1) + delta) } : i)); };
 
   const requestNewList = () => {
     if (items.length > 0) {
-      setConfirmDialog({
-        show: true, title: t.dialogNewTitle, message: t.dialogNewMsg,
-        action: () => {
-          setItems([]); setHistory([]); setFuture([]); setListName(""); setNewStore(''); setOpenStores([]); setShowArchives(false);
-          showToast(t.toastEmpty, "success");
-        }
-      });
-    } else {
-      setListName(""); showToast(t.toastEmpty, "success");
-    }
+      setConfirmDialog({ show: true, title: t.dialogNewTitle, message: t.dialogNewMsg, action: () => { setItems([]); setHistory([]); setFuture([]); setListName(""); setNewStore(''); setOpenStores([]); setShowArchives(false); showToast(t.toastEmpty, "success"); } });
+    } else { setListName(""); showToast(t.toastEmpty, "success"); }
   };
-
   const handleSaveList = () => {
     if (items.length === 0) { showToast(t.toastEmpty, "error"); return; }
-    const listToSave = {
-      id: Date.now(), name: listName.trim() || t.placeholderName, date: new Date().toLocaleDateString(), items: items
-    };
-    setSavedLists([listToSave, ...savedLists]);
-    showToast(t.toastSaved);
+    const listToSave = { id: Date.now(), name: listName.trim() || t.placeholderName, date: new Date().toLocaleDateString(), items: items };
+    setSavedLists([listToSave, ...savedLists]); showToast(t.toastSaved);
   };
-
   const requestLoadList = (archivedList) => {
-    const load = () => {
-      setItems(archivedList.items); setListName(archivedList.name); setHistory([]); setFuture([]); setShowArchives(false);
-      if (previewList) setPreviewList(null);
-      showToast(t.toastSaved, "success");
-    };
-    if (items.length > 0) {
-      setConfirmDialog({ show: true, title: t.dialogLoadTitle, message: t.dialogLoadMsg, action: load });
-    } else load();
+    const load = () => { setItems(archivedList.items); setListName(archivedList.name); setHistory([]); setFuture([]); setShowArchives(false); if (previewList) setPreviewList(null); showToast(t.toastSaved, "success"); };
+    if (items.length > 0) { setConfirmDialog({ show: true, title: t.dialogLoadTitle, message: t.dialogLoadMsg, action: load }); } else load();
   };
-
-  const requestDeleteArchived = (id) => {
-    setConfirmDialog({
-      show: true, title: t.dialogDeleteFileTitle, message: t.dialogDeleteFileMsg,
-      action: () => { setSavedLists(savedLists.filter(l => l.id !== id)); showToast(t.toastDeleted, "success"); }
-    });
-  };
-
+  const requestDeleteArchived = (id) => { setConfirmDialog({ show: true, title: t.dialogDeleteFileTitle, message: t.dialogDeleteFileMsg, action: () => { setSavedLists(savedLists.filter(l => l.id !== id)); showToast(t.toastDeleted, "success"); } }); };
   const shareList = () => {
     const pendingItems = items.filter(item => !item.done);
     if (pendingItems.length === 0) { showToast(t.toastEmpty, "error"); return; }
-    
-    const grouped = pendingItems.reduce((acc, item) => {
-      if (!acc[item.store]) acc[item.store] = [];
-      const qtyText = (item.quantity && item.quantity > 1) ? `(${item.quantity}) ` : '';
-      acc[item.store].push(`${qtyText}${item.name}`);
-      return acc;
-    }, {});
-    
+    const grouped = pendingItems.reduce((acc, item) => { if (!acc[item.store]) acc[item.store] = []; const qtyText = (item.quantity && item.quantity > 1) ? `(${item.quantity}) ` : ''; acc[item.store].push(`${qtyText}${item.name}`); return acc; }, {});
     let message = `🛒 *${listName.toUpperCase() || t.appName}*\n\n`; 
-    Object.keys(grouped).sort().forEach(store => {
-      message += `🏪 *${store.toUpperCase()}*\n`;
-      grouped[store].forEach(p => { message += `- ${p}\n`; });
-      message += "\n";
-    });
-
+    Object.keys(grouped).sort().forEach(store => { message += `🏪 *${store.toUpperCase()}*\n`; grouped[store].forEach(p => { message += `- ${p}\n`; }); message += "\n"; });
     const jsonItems = JSON.stringify(items);
     const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "PON_AQUI_TU_ENLACE_DE_NETLIFY") ? PUBLIC_URL : window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?data=${encodeURIComponent(jsonItems)}&name=${encodeURIComponent(listName)}`;
     message += `\n📲 *App Link:*\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
-
-  const openStoreTab = (storeName) => {
-    if (!openStores.includes(storeName)) setOpenStores([...openStores, storeName]);
-    setActiveTab(storeName);
-  };
-
-  const closeStoreTab = (e, storeName) => {
-    e.stopPropagation(); 
-    const hasItems = items.some(i => i.store === storeName);
-    if (hasItems) saveToHistory();
-    setOpenStores(openStores.filter(s => s !== storeName));
-    setItems(items.filter(i => i.store !== storeName));
-  };
-
-  const requestDeleteStoreFromCatalog = (e, storeToDelete) => {
-    e.stopPropagation(); 
-    setConfirmDialog({
-      show: true, title: t.deleteStoreTitle, message: `${t.deleteStoreMsg} ("${storeToDelete}")`,
-      action: () => { 
-        setAvailableStores(availableStores.filter(s => s !== storeToDelete)); 
-        showToast(t.toastStoreDeleted, "success");
-      }
-    });
-  };
-
-  const requestDeleteProductFromCatalog = (e, productToDelete) => {
-    e.stopPropagation(); 
-    setConfirmDialog({
-      show: true, title: t.deleteProductTitle, message: `${t.deleteProductMsg} ("${productToDelete}")`,
-      action: () => { setCatalog(catalog.filter(p => p !== productToDelete)); showToast(t.toastDeleted, "success"); }
-    });
-  };
-
+  const openStoreTab = (storeName) => { if (!openStores.includes(storeName)) setOpenStores([...openStores, storeName]); setActiveTab(storeName); };
+  const closeStoreTab = (e, storeName) => { e.stopPropagation(); const hasItems = items.some(i => i.store === storeName); if (hasItems) saveToHistory(); setOpenStores(openStores.filter(s => s !== storeName)); setItems(items.filter(i => i.store !== storeName)); };
+  const requestDeleteStoreFromCatalog = (e, storeToDelete) => { e.stopPropagation(); setConfirmDialog({ show: true, title: t.deleteStoreTitle, message: `${t.deleteStoreMsg} ("${storeToDelete}")`, action: () => { setAvailableStores(availableStores.filter(s => s !== storeToDelete)); showToast(t.toastStoreDeleted, "success"); } }); };
+  const requestDeleteProductFromCatalog = (e, productToDelete) => { e.stopPropagation(); setConfirmDialog({ show: true, title: t.deleteProductTitle, message: `${t.deleteProductMsg} ("${productToDelete}")`, action: () => { setCatalog(catalog.filter(p => p !== productToDelete)); showToast(t.toastDeleted, "success"); } }); };
   const performAdd = (productName, storeNameInput) => {
     if (!productName.trim()) return;
     saveToHistory();
     const finalStoreName = storeNameInput.trim() === '' ? 'General' : storeNameInput.trim();
     const itemObj = { id: Date.now(), name: productName, store: finalStoreName, done: false, quantity: 1 };
-    
     setItems(prev => [...prev, itemObj]); 
     if (!catalog.includes(productName)) setCatalog(prev => [...prev, productName]);
-    
     const storeExists = availableStores.some(s => s.toLowerCase() === finalStoreName.toLowerCase());
     if (!storeExists) setAvailableStores(prev => [...prev, finalStoreName]);
-    
-    openStoreTab(finalStoreName);
-    setNewItem(''); 
-    setIsProductOpen(false); 
-    if(productInputRef.current) productInputRef.current.focus();
-    showToast(t.toastAdded);
+    openStoreTab(finalStoreName); setNewItem(''); setIsProductOpen(false); 
+    if(productInputRef.current) productInputRef.current.focus(); showToast(t.toastAdded);
   };
-
   const addItem = (e) => { e.preventDefault(); performAdd(newItem, newStore); };
   const handleSuggestionClick = (s) => { performAdd(s, newStore); };
   const handleProductKeyDown = (e) => { if (e.key === 'Enter') { e.preventDefault(); performAdd(newItem, newStore); } };
-
   const handleStoreKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (newItem.trim()) {
-        performAdd(newItem, newStore);
-      } else {
-        const storeName = newStore.trim();
-        if (!storeName) return;
-        const storeExists = availableStores.some(s => s.toLowerCase() === storeName.toLowerCase());
-        if (!storeExists) setAvailableStores([...availableStores, storeName]);
-        openStoreTab(storeName);
-        setIsStoreOpen(false);
-        e.target.blur();
-        setNewStore(''); 
-      }
-    }
+    if (e.key === 'Enter') { e.preventDefault(); if (newItem.trim()) { performAdd(newItem, newStore); } else { const storeName = newStore.trim(); if (!storeName) return; const storeExists = availableStores.some(s => s.toLowerCase() === storeName.toLowerCase()); if (!storeExists) setAvailableStores([...availableStores, storeName]); openStoreTab(storeName); setIsStoreOpen(false); e.target.blur(); setNewStore(''); } }
   };
-
-  const toggleItem = (id) => {
-    saveToHistory();
-    setItems(items.map(i => i.id === id ? { ...i, done: !i.done } : i));
-  };
-  const deleteItem = (id) => {
-    saveToHistory();
-    setItems(items.filter(i => i.id !== id));
-    showToast(t.toastDeleted, "info");
-  };
-
+  const toggleItem = (id) => { saveToHistory(); setItems(items.map(i => i.id === id ? { ...i, done: !i.done } : i)); };
+  const deleteItem = (id) => { saveToHistory(); setItems(items.filter(i => i.id !== id)); showToast(t.toastDeleted, "info"); };
   const currentTabItems = items.filter(i => i.store === activeTab).sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
 
   // --- RENDERIZADO ---
-
-  // PANTALLA 1: IDIOMA
   if (!language) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-700 flex flex-col items-center justify-center p-6">
@@ -396,8 +217,7 @@ function App() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {LANGUAGES.map(lang => (
-              <button key={lang.code} onClick={() => handleSelectLanguage(lang.code)}
-                className="flex items-center gap-4 p-3 rounded-2xl border-2 border-white/50 bg-white/80 backdrop-blur-sm hover:border-emerald-500 hover:bg-white transition-all group shadow-sm">
+              <button key={lang.code} onClick={() => handleSelectLanguage(lang.code)} className="flex items-center gap-4 p-3 rounded-2xl border-2 border-white/50 bg-white/80 backdrop-blur-sm hover:border-emerald-500 hover:bg-white transition-all group shadow-sm">
                 <img src={lang.flagUrl} alt={lang.label} className="w-10 h-auto rounded-md shadow-sm group-hover:scale-110 transition-transform"/>
                 <div><span className="block font-black text-gray-800 text-lg">{lang.label}</span></div>
               </button>
@@ -408,7 +228,6 @@ function App() {
     );
   }
 
-  // PANTALLA 2: TUTORIAL
   if (showTutorial) {
     const steps = t.tutorial; 
     const currentStepData = steps[tutorialStep];
@@ -440,18 +259,14 @@ function App() {
     );
   }
 
-  // PANTALLA 3: ARCHIVOS / PREVIEW
   if (showArchives) {
     return (
       <div className={`app-container dark:bg-slate-900 ${largeText ? 'text-lg' : ''}`}>
         <div className="main-card relative dark:bg-slate-900 !min-h-screen">
-          <div className="sticky-header-wrapper">
-             <div className="p-6 bg-emerald-600 dark:bg-slate-800 text-white shadow-lg flex justify-between items-center md:rounded-t-3xl transition-colors">
-               <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
-               <button onClick={() => window.history.back()} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">{t.closeBtn}</button>
-             </div>
+          <div className="sticky top-0 z-50 p-6 bg-emerald-600 dark:bg-slate-800 text-white shadow-lg flex justify-between items-center transition-colors">
+             <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
+             <button onClick={() => window.history.back()} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">{t.closeBtn}</button>
           </div>
-          
           <div className="p-4 space-y-4 flex-1 bg-gray-50 dark:bg-slate-900">
             {savedLists.length === 0 ? (
               <p className="text-center text-gray-400 mt-10">{t.emptyArchives}</p>
@@ -471,7 +286,6 @@ function App() {
               ))
             )}
           </div>
-
           {previewList && (
              <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col animate-in slide-in-from-right duration-300">
                 <div className="p-4 bg-blue-600 dark:bg-blue-800 text-white shadow-md flex justify-between items-center sticky top-0">
@@ -512,12 +326,9 @@ function App() {
     );
   }
 
-  // --- APP PRINCIPAL ---
   return (
     <div className={`app-container ${largeText ? 'text-lg' : ''}`}>
       <div className="main-card">
-        
-        {/* HEADER NO PEGAJOSO (SCROLLEA CON LA PAGINA) */}
         <div className="header-section">
             <div className="flex flex-col md:flex-row justify-center items-center gap-3 mb-6 relative">
                 <div className="flex items-center gap-2">
@@ -525,18 +336,11 @@ function App() {
                   <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md italic">{t.appName}</h1>
                 </div>
                 <div className="mt-2 md:mt-0 md:absolute md:right-0 md:top-1/2 md:transform md:-translate-y-1/2 flex gap-2">
-                  <button onClick={() => setLargeText(!largeText)} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md">
-                    <span className="text-lg font-bold">Aa</span>
-                  </button>
-                  <button onClick={() => setDarkMode(!darkMode)} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md">
-                    <span className="text-xl">{darkMode ? '☀️' : '🌙'}</span>
-                  </button>
-                  <button onClick={openLanguageSelector} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md overflow-hidden">
-                    <img src={LANGUAGES.find(l => l.code === language)?.flagUrl} alt="Language" className="w-full h-full object-cover opacity-90 hover:opacity-100"/>
-                  </button>
+                  <button onClick={() => setLargeText(!largeText)} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md"><span className="text-lg font-bold">Aa</span></button>
+                  <button onClick={() => setDarkMode(!darkMode)} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md"><span className="text-xl">{darkMode ? '☀️' : '🌙'}</span></button>
+                  <button onClick={openLanguageSelector} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md overflow-hidden"><img src={LANGUAGES.find(l => l.code === language)?.flagUrl} alt="Language" className="w-full h-full object-cover opacity-90 hover:opacity-100"/></button>
                 </div>
             </div>
-
             <div className="flex flex-col gap-3 mb-4 border-b border-white/20 pb-4">
               <div className="flex justify-between items-center gap-3">
                  <input type="text" value={listName} onChange={(e) => setListName(e.target.value)} onKeyDown={handleListNameKeyDown} enterKeyHint="done" className="input-field bg-white/20 text-white font-bold text-xl focus:outline-none focus:bg-white/30 rounded-lg px-3 py-2 w-full placeholder-white/60 border border-white/10" placeholder={t.placeholderName}/>
@@ -547,7 +351,6 @@ function App() {
                  <button onClick={handleSaveList} className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg transition border border-white/10">{t.saveBtn}</button>
               </div>
             </div>
-
             <div className="mb-6 flex justify-center">
                 <button onClick={shareList} className="w-full bg-white dark:bg-slate-800 dark:text-green-400 text-[#25D366] hover:bg-green-50 dark:hover:bg-slate-700 font-bold text-sm px-4 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02]">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
@@ -559,7 +362,7 @@ function App() {
               <div className="flex gap-2 items-end">
                 <div className="flex-1 relative group">
                   <label className="block text-xs font-bold text-emerald-100 mb-1 ml-1 uppercase tracking-wide">{t.productLabel}</label>
-                  <input ref={productInputRef} type="text" placeholder={t.addProductPlaceholder} className="input-field dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:placeholder-gray-400" value={newItem} onChange={(e) => { setNewItem(e.target.value); setIsProductOpen(true); }} onKeyDown={handleProductKeyDown} onFocus={() => setIsProductOpen(true)} enterKeyHint="go"/>
+                  <input ref={productInputRef} type="text" placeholder={t.addProductPlaceholder} className="input-field" value={newItem} onChange={(e) => { setNewItem(e.target.value); setIsProductOpen(true); }} onKeyDown={handleProductKeyDown} onFocus={() => setIsProductOpen(true)} enterKeyHint="go"/>
                   {isProductOpen && filteredCatalog.length > 0 && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsProductOpen(false)}></div>
@@ -577,11 +380,10 @@ function App() {
                     </>
                   )}
                 </div>
-
                 <div className="w-5/12 relative group">
                   <label className="block text-xs font-bold text-emerald-100 mb-1 ml-1 uppercase tracking-wide truncate">{t.storeLabel}</label>
                   <div className="flex relative h-full">
-                    <input type="text" placeholder={t.storePlaceholder} className="input-field pr-8 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:placeholder-gray-400" value={newStore} onKeyDown={handleStoreKeyDown} onChange={(e) => { setNewStore(e.target.value); setIsStoreOpen(true); }} onFocus={() => setIsStoreOpen(true)} enterKeyHint="go"/>
+                    <input type="text" placeholder={t.storePlaceholder} className="input-field pr-8" value={newStore} onKeyDown={handleStoreKeyDown} onChange={(e) => { setNewStore(e.target.value); setIsStoreOpen(true); }} onFocus={() => setIsStoreOpen(true)} enterKeyHint="go"/>
                     <button type="button" onClick={() => setIsStoreOpen(!isStoreOpen)} className="absolute right-0 top-0 h-full px-3 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 cursor-pointer">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                     </button>
@@ -614,13 +416,12 @@ function App() {
             </div>
         </div>
         
-        {/* TABS TAMBIÉN SE MUEVEN (ya no son sticky) */}
         <div className="flex overflow-x-auto bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 scrollbar-hide p-2 gap-2 backdrop-blur-sm">
           {sortedOpenStores.length === 0 ? (
             <div className="p-4 text-gray-400 text-sm italic w-full text-center flex items-center justify-center gap-2"><span>👆</span> {t.selectStore}</div>
           ) : (
             sortedOpenStores.map(store => (
-              <div key={store} onClick={() => setActiveTab(store)} className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive dark:text-gray-400 dark:bg-slate-800 dark:hover:bg-slate-700'}`}>
+              <div key={store} onClick={() => setActiveTab(store)} className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive'}`}>
                 {store}
                 <button onClick={(e) => closeStoreTab(e, store)} className={`w-5 h-5 flex items-center justify-center rounded-full transition opacity-50 group-hover:opacity-100 ${activeTab === store ? 'hover:bg-red-100 text-red-400' : 'hover:bg-gray-200 text-gray-400 dark:hover:bg-slate-600'}`}>x</button>
               </div>
@@ -628,7 +429,6 @@ function App() {
           )}
         </div>
 
-        {/* LISTA (AHORA CRECE LIBREMENTE PARA OCUPAR TODA LA PANTALLA) */}
         <div className="flex-1 relative bg-white/50 dark:bg-slate-900 z-0 p-2 min-h-[300px]">
           {!activeTab ? (
              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300 dark:text-slate-700 space-y-4">
@@ -668,7 +468,6 @@ function App() {
 
       </div>
       
-      {/* DIALOGO DE CONFIRMACIÓN */}
       {confirmDialog.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform transition-all scale-100 dark:bg-slate-800">
@@ -682,7 +481,6 @@ function App() {
         </div>
       )}
 
-      {/* TOAST NOTIFICATION */}
       {toast.show && (
         <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[110] px-6 py-3 rounded-full shadow-2xl text-white font-medium flex items-center gap-2 animate-in slide-in-from-bottom-5 fade-in duration-300 ${toast.type === 'error' ? 'bg-rose-500' : toast.type === 'info' ? 'bg-gray-800' : 'bg-emerald-600'}`}>
           <span>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '🚫' : 'ℹ️'}</span>
