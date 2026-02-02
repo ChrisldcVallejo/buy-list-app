@@ -5,28 +5,38 @@
 @layer components {
   /* --- CONTENEDORES --- */
   .app-container {
-    /* Permitimos que la altura crezca con el contenido (scroll natural) */
-    @apply min-h-screen w-full bg-gray-100 dark:bg-slate-950 transition-colors duration-300 font-sans text-gray-700 flex flex-col p-0 md:p-8;
+    /* Fondo general: Claro vs Oscuro */
+    @apply min-h-screen w-full bg-gray-100 dark:bg-slate-950 transition-colors duration-500 font-sans text-gray-700 flex flex-col p-0 md:p-8;
   }
 
   .main-card {
-    /* Quitamos restricciones de altura y overflow para scroll general */
-    @apply w-full max-w-xl mx-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl md:rounded-3xl shadow-2xl border-x md:border border-white/50 dark:border-slate-800 flex flex-col min-h-screen md:min-h-0 transition-all duration-300 relative;
+    /* La tarjeta principal ahora se vuelve muy oscura en modo noche */
+    @apply w-full max-w-xl mx-auto bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl md:rounded-3xl shadow-2xl border-x md:border border-white/50 dark:border-slate-800 flex flex-col min-h-screen md:min-h-0 transition-all duration-500 relative;
   }
 
-  /* --- CABECERA (Ya no es sticky) --- */
+  /* --- CABECERA --- */
   .header-section {
-    @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg relative md:rounded-t-3xl;
+    /* AQUÍ ESTÁ EL CAMBIO CLAVE: 
+       Día: Gradiente Verde 
+       Noche: Gradiente Gris Oscuro (casi negro) */
+    @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 dark:from-slate-800 dark:to-slate-900 text-white shadow-lg relative md:rounded-t-3xl transition-all duration-500;
+  }
+
+  .sticky-header-wrapper {
+    /* El fondo pegajoso también cambia a oscuro */
+    @apply sticky top-0 z-40 bg-gray-100/95 dark:bg-slate-900/95 backdrop-blur-md transition-colors duration-500 md:rounded-t-3xl border-b border-gray-200 dark:border-slate-800 shadow-sm;
   }
 
   /* --- INPUTS --- */
   .input-field {
-    @apply w-full pl-4 pr-4 py-3 rounded-xl bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-300 shadow-inner transition-all;
+    /* Los inputs se vuelven oscuros en modo noche para no deslumbrar */
+    @apply w-full pl-4 pr-4 py-3 rounded-xl bg-white/90 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:placeholder-gray-500 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-300 dark:focus:ring-emerald-500 shadow-inner transition-all border border-transparent;
   }
 
   /* --- BOTONES --- */
   .btn-add {
-    @apply bg-gradient-to-r from-orange-400 to-amber-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2;
+    /* El botón de añadir brilla un poco menos en modo oscuro o cambia ligeramente */
+    @apply bg-gradient-to-r from-orange-400 to-amber-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-orange-200 dark:shadow-none hover:shadow-orange-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2;
   }
 
   /* --- PESTAÑAS (TABS) --- */
@@ -35,19 +45,22 @@
   }
 
   .tab-active {
-    @apply bg-white border-emerald-200 text-emerald-700 shadow-md ring-1 ring-emerald-100;
+    /* Pestaña activa en modo oscuro */
+    @apply bg-white dark:bg-slate-800 border-emerald-200 dark:border-slate-600 text-emerald-700 dark:text-emerald-400 shadow-md ring-1 ring-emerald-100 dark:ring-slate-700;
   }
 
   .tab-inactive {
-    @apply bg-transparent border-transparent text-gray-500 hover:bg-white hover:text-gray-700 hover:shadow-sm;
+    /* Pestaña inactiva en modo oscuro */
+    @apply bg-transparent border-transparent text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200 hover:shadow-sm;
   }
 
   /* --- LISTA DE ITEMS --- */
   .list-item-container {
-    @apply flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-100 transition-all;
+    /* Los elementos de la lista se vuelven gris oscuro */
+    @apply flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md hover:border-emerald-100 dark:hover:border-slate-600 transition-all;
   }
 
   .checkbox-circle {
-    @apply w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300;
+    @apply w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300 dark:border-slate-500;
   }
 }

@@ -80,10 +80,14 @@ function App() {
     if (language) localStorage.setItem('app-language', language);
   }, [language]);
 
+  // Efecto IMPORTANTE para Modo Oscuro
   useEffect(() => {
     localStorage.setItem('app-theme', darkMode ? 'dark' : 'light');
-    if (darkMode) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [darkMode]);
 
   useEffect(() => {
@@ -306,14 +310,13 @@ function App() {
     setItems(items.filter(i => i.store !== storeName));
   };
 
-  // --- BORRAR TIENDA (NUEVO MENSAJE) ---
   const requestDeleteStoreFromCatalog = (e, storeToDelete) => {
     e.stopPropagation(); 
     setConfirmDialog({
       show: true, title: t.deleteStoreTitle, message: `${t.deleteStoreMsg} ("${storeToDelete}")`,
       action: () => { 
         setAvailableStores(availableStores.filter(s => s !== storeToDelete)); 
-        showToast(t.toastStoreDeleted, "success"); // NUEVO KEY
+        showToast(t.toastStoreDeleted, "success");
       }
     });
   };
@@ -349,7 +352,6 @@ function App() {
   const handleSuggestionClick = (s) => { performAdd(s, newStore); };
   const handleProductKeyDown = (e) => { if (e.key === 'Enter') { e.preventDefault(); performAdd(newItem, newStore); } };
 
-  // --- INPUT TIENDA & TECLADO ---
   const handleStoreKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -358,7 +360,6 @@ function App() {
       } else {
         const storeName = newStore.trim();
         if (!storeName) return;
-        
         const storeExists = availableStores.some(s => s.toLowerCase() === storeName.toLowerCase());
         if (!storeExists) setAvailableStores([...availableStores, storeName]);
         openStoreTab(storeName);
@@ -444,11 +445,11 @@ function App() {
     return (
       <div className={`app-container dark:bg-slate-900 ${largeText ? 'text-lg' : ''}`}>
         <div className="main-card relative dark:bg-slate-900 !min-h-screen">
-          <div className="sticky top-0 z-50 p-6 bg-emerald-600 dark:bg-emerald-800 text-white shadow-lg">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
-              <button onClick={() => window.history.back()} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">{t.closeBtn}</button>
-            </div>
+          <div className="sticky-header-wrapper">
+             <div className="p-6 bg-emerald-600 dark:bg-slate-800 text-white shadow-lg flex justify-between items-center md:rounded-t-3xl transition-colors">
+               <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
+               <button onClick={() => window.history.back()} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">{t.closeBtn}</button>
+             </div>
           </div>
           
           <div className="p-4 space-y-4 flex-1 bg-gray-50 dark:bg-slate-900">
@@ -538,7 +539,7 @@ function App() {
 
             <div className="flex flex-col gap-3 mb-4 border-b border-white/20 pb-4">
               <div className="flex justify-between items-center gap-3">
-                 <input type="text" value={listName} onChange={(e) => setListName(e.target.value)} onKeyDown={handleListNameKeyDown} enterKeyHint="done" className="bg-white/20 text-white font-bold text-xl focus:outline-none focus:bg-white/30 rounded-lg px-3 py-2 w-full placeholder-white/60 border border-white/10" placeholder={t.placeholderName}/>
+                 <input type="text" value={listName} onChange={(e) => setListName(e.target.value)} onKeyDown={handleListNameKeyDown} enterKeyHint="done" className="input-field bg-white/20 text-white font-bold text-xl focus:outline-none focus:bg-white/30 rounded-lg px-3 py-2 w-full placeholder-white/60 border border-white/10" placeholder={t.placeholderName}/>
                  <button onClick={openArchives} className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 h-11 rounded-lg flex items-center gap-1 transition border border-white/10 whitespace-nowrap">{t.savedListsBtn}</button>
               </div>
               <div className="flex gap-2 justify-end">
