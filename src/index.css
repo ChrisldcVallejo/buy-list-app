@@ -3,62 +3,133 @@
 @tailwind utilities;
 
 @layer components {
-  /* --- CONTENEDORES --- */
+  /* --- CONTENEDOR PRINCIPAL --- */
   .app-container {
-    /* Fondo general: Claro (Gris suave) vs Oscuro (Negro azulado) */
-    @apply min-h-screen w-full bg-gray-100 dark:bg-slate-950 transition-colors duration-500 font-sans text-gray-700 flex flex-col p-0 md:p-8;
+    @apply min-h-screen w-full font-sans flex flex-col p-0 md:p-8 transition-colors duration-500;
+    /* Modo Claro */
+    background-color: #f3f4f6;
+    color: #374151;
+  }
+  /* Modo Oscuro Forzado (CSS puro) */
+  html.dark .app-container {
+    background-color: #020617 !important; /* Negro Azulado */
+    color: #cbd5e1 !important;
   }
 
+  /* --- TARJETA CENTRAL --- */
   .main-card {
-    /* Tarjeta central: En modo noche se vuelve translúcida oscura */
-    @apply w-full max-w-xl mx-auto bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl md:rounded-3xl shadow-2xl border-x md:border border-white/50 dark:border-slate-800 flex flex-col min-h-screen md:min-h-0 transition-all duration-500 relative;
+    @apply w-full max-w-xl mx-auto backdrop-blur-xl md:rounded-3xl shadow-2xl border-x md:border flex flex-col min-h-screen md:min-h-0 transition-all duration-500 relative;
+    /* Modo Claro */
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  html.dark .main-card {
+    background-color: rgba(15, 23, 42, 0.95) !important; /* Muy oscuro */
+    border-color: #1e293b !important;
   }
 
-  /* --- CABECERA (CAMBIO RADICAL) --- */
+  /* --- CABECERA --- */
   .header-section {
-    /* Día: Verde Esmeralda | Noche: Gris Pizarra Muy Oscuro */
-    @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 dark:from-slate-800 dark:to-slate-950 text-white shadow-lg relative md:rounded-t-3xl transition-all duration-500;
+    @apply p-6 text-white shadow-lg relative md:rounded-t-3xl transition-all duration-500;
+    /* Gradiente Verde Original */
+    background: linear-gradient(to right, #10b981, #0d9488);
+  }
+  html.dark .header-section {
+    /* Gradiente Oscuro Elegante */
+    background: linear-gradient(to right, #1e293b, #020617) !important;
   }
 
-  /* Si usas la versión con header pegajoso (opcional, pero incluido por si acaso) */
+  /* --- HEADER PEGAJOSO (Sticky) --- */
   .sticky-header-wrapper {
-    @apply sticky top-0 z-40 bg-gray-100/95 dark:bg-slate-950/95 backdrop-blur-md transition-colors duration-500 md:rounded-t-3xl border-b border-gray-200 dark:border-slate-800 shadow-sm;
+    @apply sticky top-0 z-40 backdrop-blur-md transition-colors duration-500 md:rounded-t-3xl border-b shadow-sm;
+    background-color: rgba(243, 244, 246, 0.95);
+    border-color: #e5e7eb;
+  }
+  html.dark .sticky-header-wrapper {
+    background-color: rgba(2, 6, 23, 0.95) !important;
+    border-color: #1e293b !important;
   }
 
   /* --- INPUTS --- */
   .input-field {
-    /* En modo noche: fondo gris oscuro, texto blanco, borde sutil */
-    @apply w-full pl-4 pr-4 py-3 rounded-xl bg-white/90 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:placeholder-gray-500 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-300 dark:focus:ring-emerald-600 shadow-inner transition-all border border-transparent;
+    @apply w-full pl-4 pr-4 py-3 rounded-xl shadow-inner transition-all border border-transparent focus:outline-none focus:ring-2;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
   }
+  .input-field:focus {
+    --tw-ring-color: #fde047;
+  } /* Amarillo */
+
+  html.dark .input-field {
+    background-color: #1e293b !important; /* Gris oscuro */
+    color: white !important;
+    border-color: #334155 !important;
+  }
+  html.dark .input-field::placeholder {
+    color: #94a3b8 !important;
+  }
+  html.dark .input-field:focus {
+    --tw-ring-color: #059669 !important;
+  } /* Verde oscuro */
 
   /* --- BOTONES --- */
   .btn-add {
-    /* Botón añadir: En modo noche pierde un poco de brillo naranja para no deslumbrar */
-    @apply bg-gradient-to-r from-orange-400 to-amber-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-orange-200 dark:shadow-none hover:shadow-orange-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2;
+    @apply text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98];
+    background: linear-gradient(to right, #fb923c, #f59e0b);
+    box-shadow: 0 10px 15px -3px rgba(253, 186, 116, 0.5);
+  }
+  html.dark .btn-add {
+    box-shadow: none !important;
+    opacity: 0.9;
   }
 
   /* --- PESTAÑAS (TABS) --- */
   .tab-base {
     @apply flex items-center gap-2 px-4 py-2 whitespace-nowrap font-medium text-sm transition-all cursor-pointer rounded-lg border;
   }
-
-  .tab-active {
-    /* Pestaña activa oscura */
-    @apply bg-white dark:bg-slate-800 border-emerald-200 dark:border-slate-600 text-emerald-700 dark:text-emerald-400 shadow-md ring-1 ring-emerald-100 dark:ring-slate-700;
-  }
-
+  /* Inactivas */
   .tab-inactive {
-    /* Pestaña inactiva oscura */
-    @apply bg-transparent border-transparent text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200 hover:shadow-sm;
+    background-color: transparent;
+    border-color: transparent;
+    color: #6b7280;
+  }
+  html.dark .tab-inactive {
+    color: #9ca3af !important;
   }
 
-  /* --- LISTA DE ITEMS --- */
+  /* Activas */
+  .tab-active {
+    background-color: white;
+    border-color: #a7f3d0;
+    color: #047857;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  html.dark .tab-active {
+    background-color: #1e293b !important;
+    border-color: #475569 !important;
+    color: #34d399 !important;
+    box-shadow: none !important;
+  }
+
+  /* --- ITEMS DE LISTA --- */
   .list-item-container {
-    /* Elementos de la lista oscuros */
-    @apply flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md hover:border-emerald-100 dark:hover:border-slate-600 transition-all;
+    @apply flex items-center justify-between p-3 rounded-xl shadow-sm border transition-all;
+    background-color: white;
+    border-color: #f3f4f6;
+  }
+  html.dark .list-item-container {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
   }
 
+  /* Checkbox */
   .checkbox-circle {
-    @apply w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300 dark:border-slate-500;
+    @apply w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300;
+    border-color: #d1d5db;
+    background-color: #f9fafb;
+  }
+  html.dark .checkbox-circle {
+    border-color: #64748b !important;
+    background-color: #0f172a !important;
   }
 }
