@@ -1,5 +1,3 @@
-// src/translations.js
-
 export const LANGUAGES = [
   { code: "es", label: "Español", flagUrl: "https://flagcdn.com/w80/es.png" },
   { code: "en", label: "English", flagUrl: "https://flagcdn.com/w80/gb.png" },
@@ -54,6 +52,9 @@ export const TRANSLATIONS = {
     recoverBtn: "Recuperar",
     closeBtn: "Cerrar",
     emptyArchives: "No tienes listas guardadas aún.",
+    previewBtn: "Ver",
+    previewTitle: "Vista Previa",
+    totalItems: "productos",
     tutorial: [
       {
         emoji: "👋",
@@ -139,6 +140,9 @@ export const TRANSLATIONS = {
     recoverBtn: "Load",
     closeBtn: "Close",
     emptyArchives: "No saved lists yet.",
+    previewBtn: "View",
+    previewTitle: "Preview",
+    totalItems: "items",
     tutorial: [
       {
         emoji: "👋",
@@ -224,6 +228,9 @@ export const TRANSLATIONS = {
     recoverBtn: "Laden",
     closeBtn: "Schließen",
     emptyArchives: "Noch keine Listen gespeichert.",
+    previewBtn: "Ansehen",
+    previewTitle: "Vorschau",
+    totalItems: "Artikel",
     tutorial: [
       {
         emoji: "👋",
@@ -309,6 +316,9 @@ export const TRANSLATIONS = {
     recoverBtn: "Charger",
     closeBtn: "Fermer",
     emptyArchives: "Aucune liste sauvegardée.",
+    previewBtn: "Voir",
+    previewTitle: "Aperçu",
+    totalItems: "articles",
     tutorial: [
       {
         emoji: "👋",
@@ -394,6 +404,9 @@ export const TRANSLATIONS = {
     recoverBtn: "Carica",
     closeBtn: "Chiudi",
     emptyArchives: "Nessuna lista salvata.",
+    previewBtn: "Vedi",
+    previewTitle: "Anteprima",
+    totalItems: "articoli",
     tutorial: [
       {
         emoji: "👋",
@@ -479,6 +492,9 @@ export const TRANSLATIONS = {
     recoverBtn: "Carregar",
     closeBtn: "Fechar",
     emptyArchives: "Sem listas salvas ainda.",
+    previewBtn: "Ver",
+    previewTitle: "Pré-visualização",
+    totalItems: "artigos",
     tutorial: [
       {
         emoji: "👋",

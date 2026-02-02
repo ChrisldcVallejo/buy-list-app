@@ -5,16 +5,17 @@
 @layer components {
   /* --- CONTENEDORES --- */
   .app-container {
-    /* Eliminado el bg-gradient de aquí para manejarlo en App.jsx */
-    @apply min-h-screen p-4 md:p-8 font-sans text-gray-700;
+    /* CAMBIO CLAVE: h-dvh (altura dinámica del viewport) y overflow-hidden para fijar la app */
+    @apply h-[100dvh] w-full overflow-hidden p-4 md:p-8 font-sans text-gray-700 flex flex-col;
   }
 
   .main-card {
-    @apply max-w-xl mx-auto bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden flex flex-col min-h-[650px] transition-all duration-300;
+    /* Ajuste para que ocupe todo el alto disponible dentro del contenedor */
+    @apply max-w-xl w-full mx-auto bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden flex flex-col h-full transition-all duration-300;
   }
 
   .header-section {
-    @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg z-20 relative;
+    @apply p-6 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg z-20 relative flex-shrink-0;
   }
 
   /* --- INPUTS --- */

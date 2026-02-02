@@ -53,7 +53,10 @@ function App() {
   
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
-  const [showArchives, setShowArchives] = useState(false); 
+  
+  // --- ESTADOS PARA MODALES Y VISTAS ---
+  const [showArchives, setShowArchives] = useState(false);
+  const [previewList, setPreviewList] = useState(null); // NUEVO: Estado para vista previa
   
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('tutorial-completed'));
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -112,6 +115,44 @@ function App() {
     }
   }, [openStores, activeTab]); 
 
+  // --- GESTIÓN DEL BOTÓN ATRÁS (HISTORIAL) ---
+  useEffect(() => {
+    const handlePopState = (event) => {
+      // Si está abierta la vista previa, la cerramos
+      if (previewList) {
+        setPreviewList(null);
+        return;
+      }
+      // Si están abiertos los archivos, los cerramos
+      if (showArchives) {
+        setShowArchives(false);
+        return;
+      }
+      // Si estamos en la selección de idioma (cuando language es null pero antes no lo era), 
+      // es complejo controlar sin saber el estado anterior, pero para "Listas Guardadas" esto funciona perfecto.
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showArchives, previewList]);
+
+  // Funciones wrapper para abrir modales y empujar historial
+  const openArchives = () => {
+    window.history.pushState({ view: 'archives' }, '');
+    setShowArchives(true);
+  };
+
+  const openLanguageSelector = () => {
+    window.history.pushState({ view: 'language' }, '');
+    setLanguage(null);
+  };
+  
+  const openPreview = (list) => {
+    window.history.pushState({ view: 'preview' }, '');
+    setPreviewList(list);
+  };
+
+
   // --- IMPORTAR URL ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -158,6 +199,7 @@ function App() {
   };
 
   const handleSelectLanguage = (langCode) => {
+    window.history.replaceState(null, '', window.location.pathname);
     setLanguage(langCode);
   };
 
@@ -270,6 +312,7 @@ function App() {
       setHistory([]); 
       setFuture([]);
       setShowArchives(false); 
+      if (previewList) setPreviewList(null);
       showToast(t.toastSaved, "success");
     };
 
@@ -405,6 +448,7 @@ function App() {
     }
   };
 
+  // --- CORRECCIÓN TECLADO MÓVIL (INPUT TIENDA) ---
   const handleStoreKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -418,7 +462,7 @@ function App() {
         if (!storeExists) setAvailableStores([...availableStores, storeName]);
         openStoreTab(storeName);
         setIsStoreOpen(false);
-        if(productInputRef.current) productInputRef.current.focus();
+        e.target.blur();
       }
     }
   };
@@ -525,7 +569,7 @@ function App() {
     );
   }
 
-  // --- VISTA DE ARCHIVOS (MODAL) ---
+  // --- VISTA DE ARCHIVOS (MODAL PRINCIPAL) ---
   if (showArchives) {
     return (
       <div className={`app-container dark:bg-slate-900 ${largeText ? 'text-lg' : ''}`}>
@@ -533,7 +577,8 @@ function App() {
           <div className="p-6 bg-emerald-600 dark:bg-emerald-800 text-white shadow-lg sticky top-0 z-30">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
-              <button onClick={() => setShowArchives(false)} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">
+              {/* Botón cerrar también hace popstate back para mantener coherencia si se cierra manual */}
+              <button onClick={() => window.history.back()} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">
                 {t.closeBtn}
               </button>
             </div>
@@ -550,6 +595,11 @@ function App() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">📅 {list.date} • {list.items.length} p.</p>
                   </div>
                   <div className="flex gap-2">
+                    {/* BOTÓN PREVIEW */}
+                    <button onClick={() => openPreview(list)} className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">
+                       👁️
+                    </button>
+
                     <button onClick={() => requestLoadList(list)} className="bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-lg text-sm font-medium hover:bg-emerald-200 dark:hover:bg-emerald-800 transition">
                       {t.recoverBtn}
                     </button>
@@ -561,7 +611,38 @@ function App() {
               ))
             )}
           </div>
+
+          {/* --- VISTA PREVIA (SUB-MODAL) --- */}
+          {previewList && (
+             <div className="absolute inset-0 z-40 bg-white dark:bg-slate-900 flex flex-col animate-in slide-in-from-right duration-300">
+                <div className="p-4 bg-blue-600 dark:bg-blue-800 text-white shadow-md flex justify-between items-center">
+                   <h3 className="font-bold text-lg">{t.previewTitle}</h3>
+                   <button onClick={() => window.history.back()} className="text-white bg-white/20 px-3 py-1 rounded-lg text-sm">{t.closeBtn}</button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                   <h2 className="text-xl font-black text-gray-800 dark:text-white mb-2">{previewList.name}</h2>
+                   <p className="text-sm text-gray-500 mb-4">{previewList.items.length} {t.totalItems}</p>
+                   
+                   <ul className="space-y-2">
+                      {previewList.items.map((item, idx) => (
+                         <li key={idx} className="flex justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
+                            <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
+                            <span className="text-gray-400 text-sm">x{item.quantity || 1}</span>
+                         </li>
+                      ))}
+                   </ul>
+                </div>
+                <div className="p-4 border-t border-gray-100 dark:border-slate-800">
+                    <button onClick={() => requestLoadList(previewList)} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-lg">
+                       {t.recoverBtn}
+                    </button>
+                </div>
+             </div>
+          )}
+
         </div>
+        
+        {/* MODAL CONFIRMACION DENTRO DE ARCHIVOS */}
         {confirmDialog.show && (
            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl">
@@ -586,19 +667,15 @@ function App() {
         {/* HEADER */}
         <div className="header-section dark:from-emerald-900 dark:to-teal-900 transition-colors duration-300">
           
-          {/* ESTRUCTURA FLEXIBLE: Columna en móvil, Fila en PC */}
           <div className="flex flex-col md:flex-row justify-center items-center gap-3 mb-6 relative">
               
-              {/* TÍTULO */}
               <div className="flex items-center gap-2">
                 <span className="text-4xl filter drop-shadow-md">🛒</span>
                 <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md italic">{t.appName}</h1>
               </div>
               
-              {/* BOTONES DE CONFIGURACIÓN */}
               <div className="mt-2 md:mt-0 md:absolute md:right-0 md:top-1/2 md:transform md:-translate-y-1/2 flex gap-2">
                 
-                {/* BOTÓN TAMAÑO DE TEXTO */}
                 <button 
                   onClick={() => setLargeText(!largeText)} 
                   className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md"
@@ -607,7 +684,6 @@ function App() {
                   <span className="text-lg font-bold">Aa</span>
                 </button>
 
-                {/* BOTÓN MODO OSCURO */}
                 <button 
                   onClick={() => setDarkMode(!darkMode)} 
                   className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md"
@@ -616,9 +692,9 @@ function App() {
                   <span className="text-xl">{darkMode ? '☀️' : '🌙'}</span>
                 </button>
 
-                {/* BOTÓN IDIOMA */}
+                {/* BOTÓN IDIOMA (Modificado para historial) */}
                 <button 
-                  onClick={() => setLanguage(null)} 
+                  onClick={openLanguageSelector} 
                   className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md overflow-hidden"
                   title="Change Language"
                 >
@@ -643,8 +719,9 @@ function App() {
                  placeholder={t.placeholderName}
                />
                
+               {/* BOTÓN ARCHIVOS (Modificado para historial) */}
                <button 
-                  onClick={() => setShowArchives(true)} 
+                  onClick={openArchives} 
                   className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 h-11 rounded-lg flex items-center gap-1 transition border border-white/10 whitespace-nowrap"
                >
                  {t.savedListsBtn}
@@ -853,7 +930,7 @@ function App() {
 
       </div>
 
-      {/* DIALOG DE CONFIRMACIÓN */}
+      {/* DIALOGO DE CONFIRMACIÓN */}
       {confirmDialog.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform transition-all scale-100 dark:bg-slate-800">
