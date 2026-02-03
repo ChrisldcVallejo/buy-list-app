@@ -291,7 +291,7 @@ function App() {
     });
 
     const jsonItems = JSON.stringify(items);
-    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "PON_AQUI_TU_ENLACE_DE_NETLIFY") ? PUBLIC_URL : window.location.origin + window.location.pathname;
+    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "buy-list-mi-compra.netlify.app") ? PUBLIC_URL : window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?data=${encodeURIComponent(jsonItems)}&name=${encodeURIComponent(listName)}`;
     message += `\n📲 *App Link:*\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
