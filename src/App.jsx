@@ -291,7 +291,7 @@ function App() {
     });
 
     const jsonItems = JSON.stringify(items);
-    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "buy-list-mi-compra.netlify.app") ? PUBLIC_URL : window.location.origin + window.location.pathname;
+    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "https://buy-list-mi-compra.netlify.app/") ? PUBLIC_URL : window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?data=${encodeURIComponent(jsonItems)}&name=${encodeURIComponent(listName)}`;
     message += `\n📲 *App Link:*\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
@@ -331,11 +331,19 @@ function App() {
 
   const performAdd = (productName, storeNameInput) => {
     if (!productName.trim()) return;
+    
     saveToHistory();
-    const finalStoreName = storeNameInput.trim() === '' ? 'General' : storeNameInput.trim();
+    
+    // --- CAMBIO 1: Usar Pestaña Activa si no se escribe tienda ---
+    let finalStoreName = storeNameInput.trim();
+    if (!finalStoreName) {
+       finalStoreName = activeTab ? activeTab : 'General';
+    }
+    
     const itemObj = { id: Date.now(), name: productName, store: finalStoreName, done: false, quantity: 1 };
     
     setItems(prev => [...prev, itemObj]); 
+    
     if (!catalog.includes(productName)) setCatalog(prev => [...prev, productName]);
     
     const storeExists = availableStores.some(s => s.toLowerCase() === finalStoreName.toLowerCase());
@@ -344,6 +352,7 @@ function App() {
     openStoreTab(finalStoreName);
     setNewItem(''); 
     setIsProductOpen(false); 
+    
     if(productInputRef.current) productInputRef.current.focus();
     showToast(t.toastAdded);
   };
@@ -477,18 +486,38 @@ function App() {
                    <h3 className="font-bold text-lg">{t.previewTitle}</h3>
                    <button onClick={() => window.history.back()} className="text-white bg-white/20 px-3 py-1 rounded-lg text-sm">{t.closeBtn}</button>
                 </div>
+                
+                {/* --- CAMBIO 2: VISTA PREVIA AGRUPADA POR TIENDA --- */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                   <h2 className="text-xl font-black text-gray-800 dark:text-white mb-2">{previewList.name}</h2>
-                   <p className="text-sm text-gray-500 mb-4">{previewList.items.length} {t.totalItems}</p>
-                   <ul className="space-y-2 pb-20">
-                      {previewList.items.map((item, idx) => (
-                         <li key={idx} className="flex justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
-                            <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
-                            <span className="text-gray-400 text-sm">x{item.quantity || 1}</span>
-                         </li>
+                   <h2 className="text-xl font-black text-gray-800 dark:text-white mb-1">{previewList.name}</h2>
+                   <p className="text-sm text-gray-500 mb-6">{previewList.items.length} {t.totalItems}</p>
+                   
+                   <div className="pb-20 space-y-6">
+                      {Object.entries(
+                          previewList.items.reduce((acc, item) => {
+                            const s = item.store || 'General';
+                            if (!acc[s]) acc[s] = [];
+                            acc[s].push(item);
+                            return acc;
+                          }, {})
+                      ).sort().map(([storeName, products]) => (
+                        <div key={storeName}>
+                           <h4 className="font-bold text-emerald-600 dark:text-emerald-400 text-sm uppercase tracking-wider border-b border-gray-200 dark:border-slate-700 pb-1 mb-2">
+                             {storeName}
+                           </h4>
+                           <ul className="space-y-2">
+                              {products.map((item, idx) => (
+                                 <li key={idx} className="flex justify-between items-center">
+                                    <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
+                                    <span className="text-gray-400 text-sm font-mono bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded">x{item.quantity || 1}</span>
+                                 </li>
+                              ))}
+                           </ul>
+                        </div>
                       ))}
-                   </ul>
+                   </div>
                 </div>
+
                 <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
                     <button onClick={() => requestLoadList(previewList)} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-lg">{t.recoverBtn}</button>
                 </div>
@@ -651,7 +680,7 @@ function App() {
                         <div className={`checkbox-circle ${item.done ? 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm' : 'border-gray-300 dark:border-slate-500 bg-gray-50 dark:bg-slate-900 group-hover:border-emerald-400'}`}>
                           {item.done && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                         </div>
-                        <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-gray-600 decoration-emerald-500/50 decoration-2' : 'text-gray-450 dark:text-white'}`}>{item.name}</span>
+                        <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-gray-600 decoration-emerald-500/50 decoration-2' : 'text-gray-700 dark:text-white'}`}>{item.name}</span>
                       </div>
                       <button onClick={() => deleteItem(item.id)} className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:text-gray-500 dark:hover:text-rose-400 dark:hover:bg-rose-900/30 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></button>
                     </li>
