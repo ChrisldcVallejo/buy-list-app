@@ -339,8 +339,7 @@ function App() {
     if (!productName.trim()) return;
     
     saveToHistory();
-    
-    // Si no hay tienda escrita, usamos la pestaña activa o 'General'
+  
     let finalStoreName = storeNameInput.trim();
     if (!finalStoreName) {
        finalStoreName = activeTab ? activeTab : 'General';
@@ -413,12 +412,10 @@ function App() {
       setListName("");
       setNewStore("");
       setOpenStores([]);
-      // (Opcional: Limpiar historial de deshacer/rehacer o mantenerlo por seguridad)
       
       // 5. Feedback visual
       showToast(t.toastSaved, "success");
     } else {
-      // Si aún quedan cosas por comprar, solo actualizamos el estado
       setItems(newItems);
     }
   };
