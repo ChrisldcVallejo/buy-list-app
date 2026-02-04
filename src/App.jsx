@@ -67,6 +67,12 @@ function App() {
 
   // --- ORDENACIÓN ---
   const sortedAvailableStores = [...availableStores].sort((a, b) => a.localeCompare(b));
+  
+  // Filtramos las tiendas según lo que escribe el usuario
+  const filteredStores = sortedAvailableStores.filter(store => 
+    store.toLowerCase().includes(newStore.toLowerCase())
+  );
+
   const sortedOpenStores = [...openStores].sort((a, b) => a.localeCompare(b));
   const filteredCatalog = catalog.filter(item => item.toLowerCase().includes(newItem.toLowerCase())).sort();
 
@@ -291,7 +297,7 @@ function App() {
     });
 
     const jsonItems = JSON.stringify(items);
-    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "https://buy-list-mi-compra.netlify.app/") ? PUBLIC_URL : window.location.origin + window.location.pathname;
+    const baseUrl = (PUBLIC_URL && PUBLIC_URL !== "buy-list-mi-compra.netlify.app") ? PUBLIC_URL : window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?data=${encodeURIComponent(jsonItems)}&name=${encodeURIComponent(listName)}`;
     message += `\n📲 *App Link:*\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
@@ -334,7 +340,7 @@ function App() {
     
     saveToHistory();
     
-    // --- CAMBIO 1: Usar Pestaña Activa si no se escribe tienda ---
+    // Si no hay tienda escrita, usamos la pestaña activa o 'General'
     let finalStoreName = storeNameInput.trim();
     if (!finalStoreName) {
        finalStoreName = activeTab ? activeTab : 'General';
@@ -350,6 +356,7 @@ function App() {
     if (!storeExists) setAvailableStores(prev => [...prev, finalStoreName]);
     
     openStoreTab(finalStoreName);
+    setNewStore(''); 
     setNewItem(''); 
     setIsProductOpen(false); 
     
@@ -379,10 +386,43 @@ function App() {
     }
   };
 
+  // --- LÓGICA DE TACHADO Y AUTO-GUARDADO (MODIFICADA) ---
   const toggleItem = (id) => {
     saveToHistory();
-    setItems(items.map(i => i.id === id ? { ...i, done: !i.done } : i));
+    
+    // 1. Calculamos el nuevo estado de los items
+    const newItems = items.map(i => i.id === id ? { ...i, done: !i.done } : i);
+    
+    // 2. Verificamos si TODOS están hechos
+    // (Aseguramos que haya items, si no, no tiene sentido guardar una lista vacía)
+    const allCompleted = newItems.length > 0 && newItems.every(item => item.done);
+
+    if (allCompleted) {
+      // 3. Guardamos automáticamente en el historial (Saved Lists)
+      const nameToSave = listName.trim() || t.placeholderName;
+      const listToSave = {
+        id: Date.now(),
+        name: nameToSave,
+        date: new Date().toLocaleDateString(),
+        items: newItems
+      };
+      setSavedLists(prev => [listToSave, ...prev]);
+
+      // 4. Limpiamos la pantalla actual
+      setItems([]);
+      setListName("");
+      setNewStore("");
+      setOpenStores([]);
+      // (Opcional: Limpiar historial de deshacer/rehacer o mantenerlo por seguridad)
+      
+      // 5. Feedback visual
+      showToast(t.toastSaved, "success");
+    } else {
+      // Si aún quedan cosas por comprar, solo actualizamos el estado
+      setItems(newItems);
+    }
   };
+
   const deleteItem = (id) => {
     saveToHistory();
     setItems(items.filter(i => i.id !== id));
@@ -487,7 +527,7 @@ function App() {
                    <button onClick={() => window.history.back()} className="text-white bg-white/20 px-3 py-1 rounded-lg text-sm">{t.closeBtn}</button>
                 </div>
                 
-                {/* --- CAMBIO 2: VISTA PREVIA AGRUPADA POR TIENDA --- */}
+                {/* VISTA PREVIA AGRUPADA */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                    <h2 className="text-xl font-black text-gray-800 dark:text-white mb-1">{previewList.name}</h2>
                    <p className="text-sm text-gray-500 mb-6">{previewList.items.length} {t.totalItems}</p>
@@ -618,7 +658,7 @@ function App() {
                       <div className="fixed inset-0 z-10" onClick={() => setIsStoreOpen(false)}></div>
                       <ul className="absolute top-full mt-2 left-0 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 dark:text-gray-200 py-2 animate-in fade-in zoom-in-95 duration-200">
                         <li className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600 cursor-default sticky top-0 z-10">{t.storeSelectTitle}</li>
-                        {sortedAvailableStores.map((store, index) => (
+                        {filteredStores.map((store, index) => (
                           <li key={index} className="px-4 py-2 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:text-emerald-700 dark:hover:text-emerald-400 cursor-pointer text-sm flex justify-between items-center transition-colors group" onClick={() => { setNewStore(store); openStoreTab(store); setIsStoreOpen(false); if(productInputRef.current) productInputRef.current.focus(); }}>
                             <span className="flex-1">{store}</span>
                             <button onClick={(e) => requestDeleteStoreFromCatalog(e, store)} className="p-1.5 rounded-full text-gray-300 hover:bg-red-100 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">x</button>
@@ -646,7 +686,12 @@ function App() {
             <div className="p-4 text-gray-400 text-sm italic w-full text-center flex items-center justify-center gap-2"><span>👆</span> {t.selectStore}</div>
           ) : (
             sortedOpenStores.map(store => (
-              <div key={store} onClick={() => setActiveTab(store)} className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive'}`}>
+              <div key={store} 
+                onClick={() => {
+                  setActiveTab(store);
+                  setNewStore(''); 
+                }} 
+                className={`tab-base group ${activeTab === store ? 'tab-active' : 'tab-inactive'}`}>
                 {store}
                 <button onClick={(e) => closeStoreTab(e, store)} className={`w-5 h-5 flex items-center justify-center rounded-full transition opacity-50 group-hover:opacity-100 ${activeTab === store ? 'hover:bg-red-100 text-red-400' : 'hover:bg-gray-200 text-gray-400 dark:hover:bg-slate-600'}`}>x</button>
               </div>

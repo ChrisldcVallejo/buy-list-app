@@ -92,7 +92,7 @@ export const TRANSLATIONS = {
       {
         emoji: "🚀",
         title: "¡Todo listo!",
-        desc: "Ya eres un experto. ¡A comprar!",
+        desc: "Ya sabes todo lo necesario sobre Buy List. ¡A comprar!",
       },
     ],
     tutSkip: "Saltar tutorial",
@@ -181,7 +181,7 @@ export const TRANSLATIONS = {
       {
         emoji: "🚀",
         title: "All Set!",
-        desc: "You are an expert now. Happy shopping!",
+        desc: "You know everything about Buy List. Happy shopping!",
       },
     ],
     tutSkip: "Skip tutorial",
@@ -270,7 +270,7 @@ export const TRANSLATIONS = {
       {
         emoji: "🚀",
         title: "Fertig!",
-        desc: "Du bist bereit. Viel Spaß beim Einkaufen!",
+        desc: "Du weißt alles über Buy List. Viel Spaß beim Einkaufen!",
       },
     ],
     tutSkip: "Überspringen",
@@ -359,7 +359,7 @@ export const TRANSLATIONS = {
       {
         emoji: "🚀",
         title: "Prêt !",
-        desc: "Vous êtes un expert. Bon shopping !",
+        desc: "Vous savez tout sur Buy List. Bon shopping !",
       },
     ],
     tutSkip: "Passer",
@@ -448,7 +448,7 @@ export const TRANSLATIONS = {
       {
         emoji: "🚀",
         title: "Tutto pronto!",
-        desc: "Sei un esperto. Buona spesa!",
+        desc: "Sai tutto su Buy List. Buona spesa!",
       },
     ],
     tutSkip: "Salta",
@@ -537,7 +537,7 @@ export const TRANSLATIONS = {
       {
         emoji: "🚀",
         title: "Tudo pronto!",
-        desc: "Já é um especialista. Boas compras!",
+        desc: "Já sabe tudo sobre Buy List. Boas compras!",
       },
     ],
     tutSkip: "Saltar",
