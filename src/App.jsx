@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { TRANSLATIONS, LANGUAGES } from './translations'
+import { App as CapacitorApp } from '@capacitor/app'; 
 
 const DEFAULT_STORES = [];
 const PUBLIC_URL = "buy-list-mi-compra.netlify.app"; 
@@ -63,18 +64,56 @@ function App() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', action: null });
 
+  // REF PARA EL BOTÓN ATRÁS
+  const stateRef = useRef({ previewList, showArchives, language });
+
   const t = language ? TRANSLATIONS[language] : TRANSLATIONS['es']; 
 
-  // --- ORDENACIÓN ---
+  // --- ORDENACIÓN Y FILTRADO ---
   const sortedAvailableStores = [...availableStores].sort((a, b) => a.localeCompare(b));
   
-  // Filtramos las tiendas según lo que escribe el usuario
   const filteredStores = sortedAvailableStores.filter(store => 
     store.toLowerCase().includes(newStore.toLowerCase())
   );
 
   const sortedOpenStores = [...openStores].sort((a, b) => a.localeCompare(b));
   const filteredCatalog = catalog.filter(item => item.toLowerCase().includes(newItem.toLowerCase())).sort();
+
+  // --- MANTENER REF ACTUALIZADA ---
+  useEffect(() => {
+    stateRef.current = { previewList, showArchives, language };
+  }, [previewList, showArchives, language]);
+
+  // --- ESCUCHA DEL BOTÓN ATRÁS DE ANDROID ---
+  useEffect(() => {
+    const setupBackButton = async () => {
+      try {
+        await CapacitorApp.removeAllListeners(); 
+        
+        CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+          const currentState = stateRef.current;
+
+          if (currentState.previewList) {
+            setPreviewList(null);
+          } else if (currentState.showArchives) {
+            setShowArchives(false);
+          } else if (!currentState.language) {
+            const stored = localStorage.getItem('app-language') || 'es';
+            setLanguage(stored);
+          } else {
+            CapacitorApp.exitApp();
+          }
+        });
+      } catch (e) {
+        console.warn("No se pudo iniciar el listener de backButton", e);
+      }
+    };
+    
+    setupBackButton();
+    return () => {
+      CapacitorApp.removeAllListeners(); 
+    };
+  }, []); 
 
   // --- EFECTOS DE PERSISTENCIA ---
   useEffect(() => { localStorage.setItem('shopping-list', JSON.stringify(items)); }, [items]);
@@ -86,7 +125,6 @@ function App() {
     if (language) localStorage.setItem('app-language', language);
   }, [language]);
 
-  // Efecto IMPORTANTE para Modo Oscuro
   useEffect(() => {
     localStorage.setItem('app-theme', darkMode ? 'dark' : 'light');
     if (darkMode) {
@@ -116,40 +154,25 @@ function App() {
     }
   }, [openStores, activeTab]); 
 
-  // --- GESTIÓN DE NAVEGACIÓN (BOTÓN ATRÁS) ---
-  useEffect(() => {
-    const handlePopState = (event) => {
-      if (previewList) {
-        setPreviewList(null);
-        return;
-      }
-      if (showArchives) {
-        setShowArchives(false);
-        return;
-      }
-      if (language === null) {
-        const stored = localStorage.getItem('app-language') || 'es';
-        setLanguage(stored);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showArchives, previewList, language]);
-
+  // --- FUNCIONES DE NAVEGACIÓN MANUAL ---
   const openArchives = () => {
-    window.history.pushState({ view: 'archives' }, '');
     setShowArchives(true);
   };
 
+  const closeArchives = () => {
+    setShowArchives(false);
+  };
+
   const openLanguageSelector = () => {
-    window.history.pushState({ view: 'language' }, '');
     setLanguage(null);
   };
   
   const openPreview = (list) => {
-    window.history.pushState({ view: 'preview' }, '');
     setPreviewList(list);
+  };
+
+  const closePreview = () => {
+    setPreviewList(null);
   };
 
   // --- IMPORTAR URL ---
@@ -260,9 +283,18 @@ function App() {
     showToast(t.toastSaved);
   };
 
+  // --- CAMBIO AQUI: BORRAR LISTA AL RECUPERAR ---
   const requestLoadList = (archivedList) => {
     const load = () => {
-      setItems(archivedList.items); setListName(archivedList.name); setHistory([]); setFuture([]); setShowArchives(false);
+      setItems(archivedList.items); 
+      setListName(archivedList.name); 
+      setHistory([]); 
+      setFuture([]); 
+      
+      // ELIMINAMOS LA LISTA DE GUARDADOS PORQUE PASA A SER LA ACTIVA
+      setSavedLists(prev => prev.filter(l => l.id !== archivedList.id));
+      
+      setShowArchives(false);
       if (previewList) setPreviewList(null);
       showToast(t.toastSaved, "success");
     };
@@ -337,9 +369,8 @@ function App() {
 
   const performAdd = (productName, storeNameInput) => {
     if (!productName.trim()) return;
-    
     saveToHistory();
-  
+    
     let finalStoreName = storeNameInput.trim();
     if (!finalStoreName) {
        finalStoreName = activeTab ? activeTab : 'General';
@@ -348,7 +379,6 @@ function App() {
     const itemObj = { id: Date.now(), name: productName, store: finalStoreName, done: false, quantity: 1 };
     
     setItems(prev => [...prev, itemObj]); 
-    
     if (!catalog.includes(productName)) setCatalog(prev => [...prev, productName]);
     
     const storeExists = availableStores.some(s => s.toLowerCase() === finalStoreName.toLowerCase());
@@ -385,19 +415,13 @@ function App() {
     }
   };
 
-  // --- LÓGICA DE TACHADO Y AUTO-GUARDADO (MODIFICADA) ---
   const toggleItem = (id) => {
     saveToHistory();
     
-    // 1. Calculamos el nuevo estado de los items
     const newItems = items.map(i => i.id === id ? { ...i, done: !i.done } : i);
-    
-    // 2. Verificamos si TODOS están hechos
-    // (Aseguramos que haya items, si no, no tiene sentido guardar una lista vacía)
     const allCompleted = newItems.length > 0 && newItems.every(item => item.done);
 
     if (allCompleted) {
-      // 3. Guardamos automáticamente en el historial (Saved Lists)
       const nameToSave = listName.trim() || t.placeholderName;
       const listToSave = {
         id: Date.now(),
@@ -407,13 +431,10 @@ function App() {
       };
       setSavedLists(prev => [listToSave, ...prev]);
 
-      // 4. Limpiamos la pantalla actual
       setItems([]);
       setListName("");
       setNewStore("");
       setOpenStores([]);
-      
-      // 5. Feedback visual
       showToast(t.toastSaved, "success");
     } else {
       setItems(newItems);
@@ -492,9 +513,9 @@ function App() {
       <div className={`app-container dark:bg-slate-900 ${largeText ? 'text-lg' : ''}`}>
         <div className="main-card relative dark:bg-slate-900 !min-h-screen">
           <div className="sticky-header-wrapper">
-             <div className="p-6 bg-emerald-600 dark:bg-slate-800 text-white shadow-lg flex justify-between items-center md:rounded-t-3xl transition-colors">
+             <div className="pt-12 pb-6 px-6 bg-emerald-600 dark:bg-slate-800 text-white shadow-lg flex justify-between items-center md:rounded-t-3xl transition-colors">
                <h2 className="text-2xl font-bold">{t.archivesTitle}</h2>
-               <button onClick={() => window.history.back()} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">{t.closeBtn}</button>
+               <button onClick={closeArchives} className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">{t.closeBtn}</button>
              </div>
           </div>
           
@@ -519,12 +540,11 @@ function App() {
           </div>
           {previewList && (
              <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col animate-in slide-in-from-right duration-300">
-                <div className="p-4 bg-blue-600 dark:bg-blue-800 text-white shadow-md flex justify-between items-center sticky top-0">
+                <div className="pt-12 pb-4 px-4 bg-blue-600 dark:bg-blue-800 text-white shadow-md flex justify-between items-center sticky top-0">
                    <h3 className="font-bold text-lg">{t.previewTitle}</h3>
-                   <button onClick={() => window.history.back()} className="text-white bg-white/20 px-3 py-1 rounded-lg text-sm">{t.closeBtn}</button>
+                   <button onClick={closePreview} className="text-white bg-white/20 px-3 py-1 rounded-lg text-sm">{t.closeBtn}</button>
                 </div>
                 
-                {/* VISTA PREVIA AGRUPADA */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                    <h2 className="text-xl font-black text-gray-800 dark:text-white mb-1">{previewList.name}</h2>
                    <p className="text-sm text-gray-500 mb-6">{previewList.items.length} {t.totalItems}</p>
@@ -555,7 +575,7 @@ function App() {
                    </div>
                 </div>
 
-                <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
+                <div className="pb-10 p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
                     <button onClick={() => requestLoadList(previewList)} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-lg">{t.recoverBtn}</button>
                 </div>
              </div>
@@ -653,6 +673,7 @@ function App() {
                   {isStoreOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsStoreOpen(false)}></div>
+                      {/* --- USO DE filteredStores EN LUGAR DE sortedAvailableStores --- */}
                       <ul className="absolute top-full mt-2 left-0 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 dark:text-gray-200 py-2 animate-in fade-in zoom-in-95 duration-200">
                         <li className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600 cursor-default sticky top-0 z-10">{t.storeSelectTitle}</li>
                         {filteredStores.map((store, index) => (
@@ -722,7 +743,7 @@ function App() {
                         <div className={`checkbox-circle ${item.done ? 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm' : 'border-gray-300 dark:border-slate-500 bg-gray-50 dark:bg-slate-900 group-hover:border-emerald-400'}`}>
                           {item.done && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                         </div>
-                        <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-gray-600 decoration-emerald-500/50 decoration-2' : 'text-gray-450 dark:text-white'}`}>{item.name}</span>
+                        <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-gray-600 decoration-emerald-500/50 decoration-2' : 'text-gray-900 dark:text-white'}`}>{item.name}</span>
                       </div>
                       <button onClick={() => deleteItem(item.id)} className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:text-gray-500 dark:hover:text-rose-400 dark:hover:bg-rose-900/30 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></button>
                     </li>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BuyList</string>
+    <string name="title_activity_main">BuyList</string>
+    <string name="package_name">com.christian.buylist</string>
+    <string name="custom_url_scheme">com.christian.buylist</string>
+</resources>
