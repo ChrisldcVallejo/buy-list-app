@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { TRANSLATIONS, LANGUAGES } from './translations'
 import { App as CapacitorApp } from '@capacitor/app'; 
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const DEFAULT_STORES = [];
 const PUBLIC_URL = "buy-list-mi-compra.netlify.app"; 
@@ -283,7 +284,6 @@ function App() {
     showToast(t.toastSaved);
   };
 
-  // --- CAMBIO AQUI: BORRAR LISTA AL RECUPERAR ---
   const requestLoadList = (archivedList) => {
     const load = () => {
       setItems(archivedList.items); 
@@ -291,7 +291,6 @@ function App() {
       setHistory([]); 
       setFuture([]); 
       
-      // ELIMINAMOS LA LISTA DE GUARDADOS PORQUE PASA A SER LA ACTIVA
       setSavedLists(prev => prev.filter(l => l.id !== archivedList.id));
       
       setShowArchives(false);
@@ -447,7 +446,35 @@ function App() {
     showToast(t.toastDeleted, "info");
   };
 
-  const currentTabItems = items.filter(i => i.store === activeTab).sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+  // --- LÓGICA DE DRAG & DROP Y ORDENACIÓN ---
+  
+  // 1. Aquí filtramos y ORDENAMOS automáticamente (Tachados al final)
+  const currentTabItems = items
+    .filter(i => i.store === activeTab)
+    .sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+
+  // 2. Al soltar el elemento (Drag End)
+  const handleDragEnd = (result) => {
+    if (!result.destination) return; 
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    if (sourceIndex === destinationIndex) return;
+
+    saveToHistory();
+
+    setItems(prevItems => {
+      // Obtenemos los items igual que se están mostrando (con los tachados al final)
+      const activeItems = prevItems.filter(i => i.store === activeTab).sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+      const otherItems = prevItems.filter(i => i.store !== activeTab);
+
+      // Aplicamos el movimiento que has hecho con el dedo
+      const [draggedItem] = activeItems.splice(sourceIndex, 1);
+      activeItems.splice(destinationIndex, 0, draggedItem);
+
+      // Guardamos la lista con el nuevo orden
+      return [...activeItems, ...otherItems];
+    });
+  };
 
   // --- RENDERIZADO ---
 
@@ -673,7 +700,6 @@ function App() {
                   {isStoreOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsStoreOpen(false)}></div>
-                      {/* --- USO DE filteredStores EN LUGAR DE sortedAvailableStores --- */}
                       <ul className="absolute top-full mt-2 left-0 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 text-gray-700 dark:text-gray-200 py-2 animate-in fade-in zoom-in-95 duration-200">
                         <li className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600 cursor-default sticky top-0 z-10">{t.storeSelectTitle}</li>
                         {filteredStores.map((store, index) => (
@@ -731,24 +757,61 @@ function App() {
                     <p className="text-sm font-medium">{t.emptyList} <span className="text-emerald-600 dark:text-emerald-400">{activeTab}</span></p>
                  </div>
               ) : (
-                <ul className="space-y-2 pb-20"> 
-                  {currentTabItems.map(item => (
-                    <li key={item.id} className="list-item-container group dark:bg-slate-800 dark:border-slate-700 dark:shadow-none">
-                      <div className="flex flex-col items-center mr-3 space-y-1">
-                        <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold hover:bg-emerald-100 transition">＋</button>
-                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">x{item.quantity || 1}</span>
-                        <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-red-100 hover:text-red-500 transition">－</button>
-                      </div>
-                      <div onClick={() => toggleItem(item.id)} className="flex items-center cursor-pointer flex-1 select-none">
-                        <div className={`checkbox-circle ${item.done ? 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm' : 'border-gray-300 dark:border-slate-500 bg-gray-50 dark:bg-slate-900 group-hover:border-emerald-400'}`}>
-                          {item.done && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
-                        </div>
-                        <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-gray-600 decoration-emerald-500/50 decoration-2' : 'text-gray-900 dark:text-white'}`}>{item.name}</span>
-                      </div>
-                      <button onClick={() => deleteItem(item.id)} className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:text-gray-500 dark:hover:text-rose-400 dark:hover:bg-rose-900/30 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></button>
-                    </li>
-                  ))}
-                </ul>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="lista-compra">
+                    {(provided) => (
+                      <ul 
+                        className="space-y-2 pb-20 select-none"
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                      > 
+                        {currentTabItems.map((item, index) => (
+                          <Draggable key={item.id.toString()} draggableId={item.id.toString()} index={index}>
+                            {(provided, snapshot) => (
+                              <li 
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`list-item-container group dark:bg-slate-800 dark:border-slate-700 dark:shadow-none 
+                                  ${snapshot.isDragging ? 'ring-2 ring-emerald-500 scale-[1.02] shadow-xl z-50' : ''}
+                                `}
+                                style={provided.draggableProps.style}
+                              >
+                                {/* --- ICONO PARA ARRASTRAR --- */}
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="text-gray-300 dark:text-gray-600 mr-1 p-2 -ml-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center focus:outline-none touch-none"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="9" cy="5" r="1"></circle>
+                                    <circle cx="9" cy="12" r="1"></circle>
+                                    <circle cx="9" cy="19" r="1"></circle>
+                                    <circle cx="15" cy="5" r="1"></circle>
+                                    <circle cx="15" cy="12" r="1"></circle>
+                                    <circle cx="15" cy="19" r="1"></circle>
+                                  </svg>
+                                </div>
+
+                                <div className="flex flex-col items-center mr-3 space-y-1">
+                                  <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold hover:bg-emerald-100 transition">＋</button>
+                                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400">x{item.quantity || 1}</span>
+                                  <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-400 flex items-center justify-center text-xs font-bold hover:bg-red-100 hover:text-red-500 transition">－</button>
+                                </div>
+                                <div onClick={() => toggleItem(item.id)} className="flex items-center cursor-pointer flex-1 select-none">
+                                  <div className={`checkbox-circle ${item.done ? 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm' : 'border-gray-300 dark:border-slate-500 bg-gray-50 dark:bg-slate-900 group-hover:border-emerald-400'}`}>
+                                    {item.done && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
+                                  </div>
+                                  <span className={`text-lg font-medium transition-all duration-300 ml-3 ${item.done ? 'line-through text-gray-400 dark:text-gray-600 decoration-emerald-500/50 decoration-2' : 'text-gray-450 dark:text-white'}`}>{item.name}</span>
+                                </div>
+                                <button onClick={() => deleteItem(item.id)} className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:text-gray-500 dark:hover:text-rose-400 dark:hover:bg-rose-900/30 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></button>
+                              </li>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </ul>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               )}
             </>
           )}

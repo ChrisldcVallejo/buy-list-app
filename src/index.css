@@ -18,13 +18,14 @@
 
   /* --- TARJETA CENTRAL --- */
   .main-card {
-    @apply w-full max-w-xl mx-auto backdrop-blur-xl md:rounded-3xl shadow-2xl border-x md:border flex flex-col min-h-screen md:min-h-0 transition-all duration-500 relative;
-    /* Modo Claro */
-    background-color: rgba(255, 255, 255, 0.8);
+    /* AQUÍ ESTÁ EL ARREGLO: Hemos quitado el backdrop-blur-xl que rompía las coordenadas */
+    @apply w-full max-w-xl mx-auto md:rounded-3xl shadow-2xl border-x md:border flex flex-col min-h-screen md:min-h-0 transition-all duration-500 relative;
+    /* Modo Claro: Fondo sólido para que el arrastre funcione perfecto */
+    background-color: #ffffff;
     border-color: rgba(255, 255, 255, 0.5);
   }
   html.dark .main-card {
-    background-color: rgba(15, 23, 42, 0.95) !important; /* Muy oscuro */
+    background-color: #0f172a !important; /* Sólido oscuro */
     border-color: #1e293b !important;
   }
 
