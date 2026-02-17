@@ -15,10 +15,7 @@ function App() {
     return saved === 'dark';
   });
 
-  const [largeText, setLargeText] = useState(() => {
-    const saved = localStorage.getItem('app-text-size');
-    return saved === 'large';
-  });
+  // (Eliminado largeText y setLargeText)
 
   const [listName, setListName] = useState(''); 
   
@@ -134,10 +131,6 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
-
-  useEffect(() => {
-    localStorage.setItem('app-text-size', largeText ? 'large' : 'normal');
-  }, [largeText]);
 
   useEffect(() => {
     const storesWithItems = [...new Set(items.map(i => i.store))];
@@ -286,7 +279,9 @@ function App() {
 
   const requestLoadList = (archivedList) => {
     const load = () => {
-      setItems(archivedList.items); 
+      // Reseteamos 'done' a false
+      setItems(archivedList.items.map(item => ({ ...item, done: false }))); 
+      
       setListName(archivedList.name); 
       setHistory([]); 
       setFuture([]); 
@@ -305,7 +300,11 @@ function App() {
   const requestDeleteArchived = (id) => {
     setConfirmDialog({
       show: true, title: t.dialogDeleteFileTitle, message: t.dialogDeleteFileMsg,
-      action: () => { setSavedLists(savedLists.filter(l => l.id !== id)); showToast(t.toastDeleted, "success"); }
+      action: () => { 
+        setSavedLists(savedLists.filter(l => l.id !== id)); 
+        // Usa el mensaje "Lista borrada" si ya actualizaste translations.js
+        showToast(t.toastListDeleted || "Lista borrada", "success"); 
+      }
     });
   };
 
@@ -537,7 +536,7 @@ function App() {
   // PANTALLA 3: ARCHIVOS / PREVIEW
   if (showArchives) {
     return (
-      <div className={`app-container dark:bg-slate-900 ${largeText ? 'text-lg' : ''}`}>
+      <div className="app-container">
         <div className="main-card relative dark:bg-slate-900 !min-h-screen">
           <div className="sticky-header-wrapper">
              <div className="pt-12 pb-6 px-6 bg-emerald-600 dark:bg-slate-800 text-white shadow-lg flex justify-between items-center md:rounded-t-3xl transition-colors">
@@ -626,7 +625,7 @@ function App() {
 
   // --- APP PRINCIPAL ---
   return (
-    <div className={`app-container ${largeText ? 'text-lg' : ''}`}>
+    <div className="app-container">
       <div className="main-card">
         
         {/* HEADER */}
@@ -637,9 +636,6 @@ function App() {
                   <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md italic">{t.appName}</h1>
                 </div>
                 <div className="mt-2 md:mt-0 md:absolute md:right-0 md:top-1/2 md:transform md:-translate-y-1/2 flex gap-2">
-                  <button onClick={() => setLargeText(!largeText)} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md">
-                    <span className="text-lg font-bold">Aa</span>
-                  </button>
                   <button onClick={() => setDarkMode(!darkMode)} className="bg-white/20 hover:bg-white/30 border border-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-all hover:scale-105 shadow-sm backdrop-blur-md">
                     <span className="text-xl">{darkMode ? '☀️' : '🌙'}</span>
                   </button>
