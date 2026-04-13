@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.christian.buylist"
+    namespace = "com.chrisvallejo.buylist"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.christian.buylist"
+        applicationId "com.chrisvallejo.buylist"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

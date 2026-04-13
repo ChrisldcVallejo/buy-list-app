@@ -1,4 +1,4 @@
-package com.christian.buylist;
+package com.chrisvallejo.buylist;
 
 import com.getcapacitor.BridgeActivity;
 

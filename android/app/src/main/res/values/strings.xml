@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">BuyList</string>
     <string name="title_activity_main">BuyList</string>
-    <string name="package_name">com.christian.buylist</string>
-    <string name="custom_url_scheme">com.christian.buylist</string>
+    <string name="package_name">com.chrisvallejo.buylist</string>
+    <string name="custom_url_scheme">com.chrisvallejo.buylist</string>
 </resources>
